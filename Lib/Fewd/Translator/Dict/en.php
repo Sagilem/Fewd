@@ -1,0 +1,3 @@
+<?php
+
+$fewd['welcome'] = 'Welcome !';
