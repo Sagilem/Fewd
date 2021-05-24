@@ -1,0 +1,70 @@
+/**********************************************************************************************************************/
+/*
+/* FEWD - Just a FEW Development (https://fewd.org)
+/*
+/**********************************************************************************************************************/
+
+
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@100&display=swap');
+
+
+/*--------------------------------------------------------------------------------------------------------------------*/
+/* Body
+/*--------------------------------------------------------------------------------------------------------------------*/
+body
+{
+	background                    : #333;
+	font-family                   : Roboto, sans-serif;
+	font-size                     : 20pt;
+	color                         : white;
+	text-align                    : center;
+}
+
+
+/*--------------------------------------------------------------------------------------------------------------------*/
+/* Title
+/*--------------------------------------------------------------------------------------------------------------------*/
+h1.error-code
+{
+	font-family                   : fewd, serif;
+	font-size                     : 80pt;
+	color                         : pink;
+	text-align                    : center;
+}
+
+
+/*--------------------------------------------------------------------------------------------------------------------*/
+/* Error return
+/*--------------------------------------------------------------------------------------------------------------------*/
+p.error-return
+{
+	margin-top                    : 100px;
+	font-size                     : 12pt;
+}
+
+p.error-return a
+{
+	color                         : #99f;
+}
+
+p.error-return a:hover
+{
+	color                         : #fff;
+}
+
+
+/*--------------------------------------------------------------------------------------------------------------------*/
+/* Fewd font
+/*--------------------------------------------------------------------------------------------------------------------*/
+@font-face
+{
+	font-family: 'fewd';
+	src: url('../Fonts/amerika-sans/AMERSN__-webfont.eot');
+	src: url('../Fonts/amerika-sans/AMERSN__-webfont.eot?#iefix') format('embedded-opentype'),
+		 url('../Fonts/amerika-sans/AMERSN__-webfont.woff2') format('woff2'),
+		 url('../Fonts/amerika-sans/AMERSN__-webfont.woff') format('woff'),
+		 url('../Fonts/amerika-sans/AMERSN__-webfont.ttf') format('truetype'),
+		 url('../Fonts/amerika-sans/AMERSN__-webfont.svg#amerika_sansregular') format('svg');
+	font-weight: normal;
+	font-style: normal;
+}
