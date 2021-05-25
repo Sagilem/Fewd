@@ -2,15 +2,6 @@
 //----------------------------------------------------------------------------------------------------------------------
 // FEWD - Just a FEW Development (https://fewd.org)
 //----------------------------------------------------------------------------------------------------------------------
-// FEWD is :
-// - a set of useful modules
-// - a way to design new modules : the CORE module contains everything for that.
-//
-// CORE hosts the FEWD base classes :
-// - `AThing`  : base class for every FEWD class
-// - `AModule` : base class for every FEWD module
-// - `ATest`   : base class to develop a unit test
-//----------------------------------------------------------------------------------------------------------------------
 
 
 namespace Fewd\Core;

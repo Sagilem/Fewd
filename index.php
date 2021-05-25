@@ -10,15 +10,23 @@ include 'Lib/Fewd/Fewd.php';
 use Fewd\App\TApp;
 
 
+// Inits the app
 $app = new TApp();
 $app->Init();
 
+
+// Runs all tests
 $app->Test();
 
-$app->Router()->AddStrictRule('', 'INDEX');
-$app->Router()->AddRoute('INDEX', function() { echo 'BONJOUR'; });
 
+// Defines routes
+$app->Router()->AddStrictRule('', 'HOMEPAGE');
+$app->Router()->AddRoute('HOMEPAGE', function() { echo 'This is my Homepage.'; });
+
+
+// Runs app
 $app->Run();
+
 
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -26,6 +34,6 @@ $app->Run();
 //----------------------------------------------------------------------------------------------------------------------
 function tr($value, $label = '')
 {
-	global $tracer;
-	$tracer->Trace($value, $label);
+	global $app;
+	$app->Tracer()->Trace($value, $label);
 }

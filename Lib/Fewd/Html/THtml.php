@@ -180,7 +180,7 @@ class THtml extends AModule
 	//------------------------------------------------------------------------------------------------------------------
 	// Html code for a "class" attribute
 	//------------------------------------------------------------------------------------------------------------------
-	public function ClassesAttribute($classes) : string
+	public function ClassesAttribute(string|array $classes) : string
 	{
 		// If an array was given :
 		// Uses values, or keys if values were not provided
