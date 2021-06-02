@@ -1,0 +1,42 @@
+{
+	"name": "sagilem/fewd",
+	"type": "library",
+	"description": "FEWD - Just a FEW Development (https://fewd.org)",
+	"keywords": ["framework", "PHP"],
+	"homepage": "https://fewd.org",
+	"license": "GPL-3.0-or-later",
+	"authors":
+	[
+		{
+			"name": "Gilles Bégué",
+			"email": "gilles.begue@fewd.org"
+        },
+		{
+			"name": "Sagilem Company",
+			"homepage": "https://sagilem.com",
+			"email": "contact@sagilem.com"
+		},
+        {
+            "name": "The FEWD community",
+            "homepage": "https://fewd.org/contributors"
+        }
+    ],
+	"require":
+	{
+		"php": ">=8.0"
+	},
+	"autoload": {},
+	"scripts":
+	{
+		"post-install-cmd":
+		[
+			"cd src/Fewd && composer install",
+			"rm -r vendor"
+		],
+		"post-update-cmd":
+		[
+			"cd src/Fewd && composer update",
+			"rm -r vendor"
+		]
+	}
+}
