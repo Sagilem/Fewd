@@ -12,19 +12,23 @@ It can be used as a foundation for a new project, or as a complement to any othe
 
 ## Usage
 
-Fewd can be uploaded anywhere in your project (let's say, under `/Lib`).
+The main source directory `src/Fewd` can be uploaded anywhere in your project (let's say, under `/Lib`).
 
 	<?php
 
-		include 'Lib/Fewd.php';
+		include 'Lib/Fewd/Fewd.php';
 
 And that's it.
+
+Fewd also holds some facultative dependencies to external libraries. If you need some of them, please run `compose update` at root of the `Fewd` directory.
 
 
 ## FEWD is composed by modules
 
 Modules basically are *folders* under your FEWD directory.
-Custom modules can also be created and put wherever you want.
+
+Fewd implements its own development pattern, called... `Fewd Pattern`.
+Custom modules can also be created following this pattern, and can be put wherever you want in your project.
 
 If `Xyz` is the module name, then there will be a file called `TXyz.php`, it describes the class `TXyz` that is intended to be instantiated as a singleton. This singleton will deliver all general methods and properties of the module.
 
