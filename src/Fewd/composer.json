@@ -1,0 +1,25 @@
+{
+	"name": "fewd/fewd",
+	"type": "library",
+	"description": "FEWD - Just a FEW Development (https://fewd.org)",
+	"keywords": ["framework", "PHP"],
+	"homepage": "https://fewd.org",
+	"require":
+	{
+		"php": ">=8.0"
+	},
+	"autoload": {},
+	"scripts":
+	{
+		"post-install-cmd":
+		[
+			"cd html && composer install",
+			"rm -r vendor"
+		],
+		"post-update-cmd":
+		[
+			"cd html && composer update",
+			"rm -r vendor"
+		]
+	}
+}

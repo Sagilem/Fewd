@@ -1,0 +1,31 @@
+version: '3.8'
+services:
+  db:
+    build:
+      context: .
+      dockerfile: Dockerfile_db
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - 3306:3306
+  db_pma:
+    image: phpmyadmin/phpmyadmin:5.0.0
+    depends_on:
+      - db
+    ports:
+      - 8082:80
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      PMA_USER: root
+      PMA_PASSWORD: root
+  www:
+    build:
+      context: .
+      dockerfile: Dockerfile_www
+    restart: always
+    volumes:
+      - "./../www:/var/www/html"
+      - "./../src:/var/www/src"
+    ports:
+      - 80:80
