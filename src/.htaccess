@@ -1,0 +1,25 @@
+# Cache for image files
+#<FilesMatch ".(jpg|jpeg|png|gif|ico|svg)$">
+#Header set Cache-Control "max-age=2592000, public"
+#</FilesMatch>
+
+# Starts url-rewriting engine
+Options +FollowSymLinks
+RewriteEngine On
+
+# HTTPS is mandatory
+RewriteCond %{HTTP_HOST} !localhost
+RewriteCond %{HTTPS} off
+RewriteRule (.*) https://%{HTTP_HOST}%{REQUEST_URI}
+
+# Serve existing files
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule .? - [L]
+
+# Maintenance
+#RewriteCond %{REQUEST_URI} !/offline.html$
+#RewriteRule $ /offline.html [R=302,L]
+
+# Dynamic content is ruled through index.php
+RewriteCond %{REQUEST_URI} !.php$
+RewriteRule (.*) index.php [QSA]
