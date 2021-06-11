@@ -166,8 +166,8 @@ class TTranslator extends AModule
 	//------------------------------------------------------------------------------------------------------------------
 	public function RecordDictionary(string $path)
 	{
-		// Dictionary must be an abslute path
-		$path = $this->Core()->AbsolutePath($path);
+		// Dictionary must be an absolute filename
+		$path = $this->Core()->AbsoluteFilename($path);
 
 		// If dictionary is already recorded :
 		// Does nothing

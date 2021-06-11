@@ -8,6 +8,7 @@ namespace Fewd\Tracer;
 
 
 use Fewd\Core\AThing;
+use Fewd\Core\TCore;
 
 
 class TLog extends AThing
@@ -32,9 +33,9 @@ class TLog extends AThing
 	//------------------------------------------------------------------------------------------------------------------
 	// Constructor
 	//------------------------------------------------------------------------------------------------------------------
-	public function __construct(TTracer $tracer, string $filename, string $ret)
+	public function __construct(TCore $core, TTracer $tracer, string $filename, string $ret)
 	{
-		parent::__construct($tracer->Core());
+		parent::__construct($core);
 
 		$this->_Tracer   = $tracer;
 		$this->_Filename = $filename;

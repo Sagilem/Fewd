@@ -2,21 +2,19 @@
 //----------------------------------------------------------------------------------------------------------------------
 // FEWD - Just a FEW Development (https://fewd.org)
 //----------------------------------------------------------------------------------------------------------------------
-// A **router** routes a given url + Http verb to the corresponding treatment.
+// A **router** routes a given url (i.e. path + arguments) to the corresponding action.
 //
-// Thanks to a router, it is possible to share the same treatment by many urls/verbs. For example :
-// associate `product.php?id=<xyz>`, `prod-<xyz>.php`, `<permalink>.php`... to the same unique product display.
-// It is also possible to route different Http verbs to the same resource.
+// Thanks to a router, it is possible to share the same action by many urls. For example :
+// `product.php?id=<xyz>`, `prod-<xyz>.php`, `<permalink>.php`... lead to the same unique product display.
 //
-// To achieve this goal, the router uses **rules** and **routes**.
+// To achieve in this goal, the router uses **rules** and **actions**.
 //
-// A rule is a lambda function that returns the **route id** corresponding to a given url + verb.
-// The router brings some helpers to implement the most basic rules : regexp transcoding, root transcoding...
-// Rule callback arguments : a url, an array of arguments and a verb.
-// Rule result : a route id, that is a route code sometimes completed by a query string of identification arguments
+// A **rule** is a lambda function (callback) that turns a certain type of urls into a **route**.
+// A **route** is a code (**route id**) + a query string composed by url args + some other args derived from the url.
+// There are some helpers to implement the most basic rules : regexp transcoding, root transcoding...
 //
-// A route associates a route id to a treatment (callback).
-// Route callback arguments : an array of identification arguments
+// An **action** is a lambda function (callback) associated to a **route id**. The callback takes the route
+// arguments + a http verb.
 //----------------------------------------------------------------------------------------------------------------------
 
 
@@ -29,16 +27,16 @@ use Fewd\Core\AModule;
 class TRouter extends AModule
 {
 	// Rules
-	protected $_Rules = array();
-    public final function Rules()                                  { return $this->_Rules;               }
-	public       function AddRule(callable $callback)              { $this->_Rules[] = $callback;        }
+	private $_Rules = array();
+    public final function Rules() { return $this->_Rules; }
+	public       function AddRule(callable $callback) { $this->_Rules[] = $callback; }
 
-	// Routes
-	private $_Routes = array();
-	public final function Routes()                                 { return $this->_Routes;              }
-	public       function Route(   string $id) : callable          { return $this->_Routes[$id] ?? null; }
-	public       function HasRoute(string $id) : bool              { return isset($this->_Routes[$id]);  }
-	public       function AddRoute(string $id, callable $callback) { $this->_Routes[$id] = $callback;    }
+	// Actions
+	private $_Actions = array();
+	public final function Actions()                                      { return $this->_Actions; }
+	public       function Action(   string $routeId) : callable          { return $this->_Actions[$routeId] ?? null; }
+	public       function HasAction(string $routeId) : bool              { return isset($this->_Actions[$routeId]); }
+	public       function AddAction(string $routeId, callable $callback) { $this->_Actions[$routeId] = $callback; }
 
 
 	//------------------------------------------------------------------------------------------------------------------
@@ -48,50 +46,67 @@ class TRouter extends AModule
 	{
 		$strict = $this->Core()->ToLower($strict);
 
-		$this->AddRule(function(string $url, array $args, string $verb) use($strict, $routeId) : string
+		$callback = function(string $path, array $args) use($strict, $routeId) : string
 		{
 			$this->Nop($args);
-			$this->Nop($verb);
 
-			if($url === $strict)
+			if($path === $strict)
 			{
 				return $routeId;
 			}
 
 			return '';
-		});
+		};
+
+		$this->AddRule($callback);
 	}
 
 
 	//------------------------------------------------------------------------------------------------------------------
 	// Adds a regexp rule
 	//------------------------------------------------------------------------------------------------------------------
-	public function AddRegexpRule(string $regexp, string $routeId, string $idName = '')
+	public function AddRegexpRule(string $regexp, string $routeId, array|string $idName = '')
 	{
-		if(substr($regexp, 0, 1) !== substr($regexp, -1))
-		{
-			$regexp = '/' . $regexp . '/';
-		}
+		$regexp = '#' . $regexp . '#';
 
-		$this->AddRule(function(string $url, array $args, string $verb) use($regexp, $routeId, $idName) : string
+		$callback = function(string $path, array $args) use($regexp, $routeId, $idName) : string
 		{
-			$this->Nop($args);
-			$this->Nop($verb);
-
-			if(preg_match($regexp, $url, $matches) === 1)
+			if(preg_match($regexp, $path, $matches) === 1)
 			{
-				if(($idName === '') || !isset($matches[1]))
+				if(is_string($idName))
 				{
-					return $routeId;
+					if($idName === '')
+					{
+						$idName = array();
+					}
+					else
+					{
+						$idName = array($idName);
+					}
 				}
 
-				$arg = $this->Core()->ToLower($matches[1]);
+				foreach($idName as $k => $v)
+				{
+					if(isset($matches[$k + 1]))
+					{
+						$args[$v] = $matches[$k + 1];
+					}
+				}
 
-				return $routeId . '?' . $idName . '=' . urlencode($arg);
+				$res = $routeId;
+
+				if(!empty($args))
+				{
+					$res.= '?' . http_build_query($args);
+				}
+
+				return $res;
 			}
 
 			return '';
-		});
+		};
+
+		$this->AddRule($callback);
 	}
 
 
@@ -102,25 +117,30 @@ class TRouter extends AModule
 	{
 		$root = $this->Core()->ToLower($root);
 
-		$this->AddRule(function(string $url, array $args, string $verb) use($root, $routeId, $idName) : string
+		$callback = function(string $path, array $args) use($root, $routeId, $idName) : string
 		{
-			$this->Nop($args);
-			$this->Nop($verb);
-
-			if($this->Core()->StartsWith($url, $root))
+			if($this->Core()->StartsWith($path, $root))
 			{
-				if($idName === '')
+				if($idName !== '')
 				{
-					return $routeId;
+					$arg = substr($path, strlen($root));
+					$args[$idName] = $arg;
 				}
 
-				$arg = substr($url, strlen($root));
+				$res = $routeId;
 
-				return $routeId . '?' . $idName . '=' . urlencode($arg);
+				if(!empty($args))
+				{
+					$res.= '?' . http_build_query($args);
+				}
+
+				return $res;
 			}
 
 			return '';
-		});
+		};
+
+		$this->AddRule($callback);
 	}
 
 
@@ -132,33 +152,37 @@ class TRouter extends AModule
 		$start = $this->Core()->ToLower($start);
 		$end   = $this->Core()->ToLower($end  );
 
-		$this->AddRule(function(string $url, array $args, string $verb)
-		    use($start, $end, $routeId, $idName) : string
+		$callback = function(string $path, array $args) use($start, $end, $routeId, $idName) : string
 		{
-			$this->Nop($args);
-			$this->Nop($verb);
-
-			if($this->Core()->StartsWith($url, $start) && $this->Core()->EndsWith($url, $end))
+			if($this->Core()->StartsWith($path, $start) && $this->Core()->EndsWith($path, $end))
 			{
-				if($idName === '')
+				if($idName !== '')
 				{
-					return $routeId;
+					$arg = substr($path, strlen($start), -strlen($end));
+					$args[$idName] = $arg;
 				}
 
-				$arg = substr($url, strlen($start), -strlen($end));
+				$res = $routeId;
 
-				return $routeId . '?' . $idName . '=' . urlencode($arg);
+				if(!empty($args))
+				{
+					$res.= '?' . http_build_query($args);
+				}
+
+				return $res;
 			}
 
 			return '';
-		});
+		};
+
+		$this->AddRule($callback);
 	}
 
 
 	//------------------------------------------------------------------------------------------------------------------
 	// Gets the HTTP message corresponding to a given code
 	//------------------------------------------------------------------------------------------------------------------
-	public function Message(int $code)
+	public function Message(int $code) : string
 	{
 		switch($code)
 		{
@@ -178,7 +202,16 @@ class TRouter extends AModule
 			case 504 : return 'Gateway Timeout';
 		}
 
-		return '404 Not found';
+		return 'Not found';
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Gets the HTTP code + message corresponding to a given code
+	//------------------------------------------------------------------------------------------------------------------
+	public function CodeMessage(int $code) : string
+	{
+		return $code . ' ' . $this->Message($code);
 	}
 
 
@@ -187,7 +220,7 @@ class TRouter extends AModule
 	//------------------------------------------------------------------------------------------------------------------
 	public function Header(int $code)
 	{
-		header('HTTP/1.1 ' . $code . ' ' . $this->Message($code));
+		header('HTTP/1.1 ' . $this->CodeMessage($code));
 	}
 
 
@@ -330,32 +363,13 @@ class TRouter extends AModule
 
 
 	//------------------------------------------------------------------------------------------------------------------
-	// Gets the route id corresponding to a given url / args / verb
+	// Gets the route corresponding to a given url path + url arguments
 	//------------------------------------------------------------------------------------------------------------------
-	public function RouteId(string $url, string $verb = '') : string
+	public function Route(string $path, array $args) : string
 	{
-		// Url must me in lowercase to be correctly scanned
-		$url = $this->Core()->ToLower($url);
-
-		// Inits arguments
-		$args = array();
-
-		// Splits url from its arguments
-		$pos = strpos($url, '?');
-
-		if($pos !== false)
+		foreach($this->Rules() as $v)
 		{
-			$queryString = substr($url, $pos + 1);
-			$url         = substr($url, 0, $pos);
-
-			parse_str($queryString, $args);
-		}
-
-		// For each rule :
-		// Returns the first found route id
-		foreach($this->_Rules as $v)
-		{
-			$res = call_user_func($v, $url, $args, $verb);
+			$res = call_user_func($v, $path, $args);
 
 			if($res !== '')
 			{
@@ -363,8 +377,6 @@ class TRouter extends AModule
 			}
 		}
 
-		// No rule found :
-		// Returns an empty route id
 		return '';
 	}
 
@@ -372,28 +384,30 @@ class TRouter extends AModule
 	//------------------------------------------------------------------------------------------------------------------
 	// Runs a given route
 	//------------------------------------------------------------------------------------------------------------------
-	public function RunRoute(string $routeId)
+	public function RunRoute(string $route, string $verb)
 	{
-		// Splits route id from arguments given as a query string
+		// Splits route id and query string
+		$routeId     = $route;
 		$queryString = '';
-		$pos         = strpos($routeId, '?');
+
+		$pos = strpos($route, '?');
 
 		if($pos !== false)
 		{
-			$queryString = substr($routeId, $pos + 1);
-			$routeId     = substr($routeId, 0, $pos);
+			$routeId     = substr($route, 0, $pos);
+			$queryString = substr($route, $pos + 1);
 		}
 
-		// If route is known :
-		// Runs route
-		if($this->HasRoute($routeId))
+		// If route id is known :
+		// Runs action
+		if($this->HasAction($routeId))
 		{
-			$route = $this->Route($routeId);
-			$args  = array();
+			$action = $this->Action($routeId);
+			$args   = array();
 
 			parse_str($queryString, $args);
 
-			call_user_func($route, $args);
+			call_user_func($action, $args, $verb);
 		}
 
 		// Otherwise :
@@ -410,11 +424,8 @@ class TRouter extends AModule
 	//------------------------------------------------------------------------------------------------------------------
 	public function Run()
 	{
-		$url     = $this->Core()->CurrentRelativeUrl();
-		$verb    = $this->Core()->CurrentVerb();
+		$route = $this->Route($this->Core()->CurrentPath(), $this->Core()->CurrentArgs());
 
-		$routeId = $this->RouteId($url, $verb);
-
-		$this->RunRoute($routeId);
+		$this->RunRoute($route, $this->Core()->CurrentVerb());
 	}
 }

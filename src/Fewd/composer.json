@@ -30,12 +30,12 @@
 	{
 		"post-install-cmd":
 		[
-			"cd html && composer install",
+			"cd Html && composer install",
 			"rm -r vendor"
 		],
 		"post-update-cmd":
 		[
-			"cd html && composer update",
+			"cd Html && composer update",
 			"rm -r vendor"
 		]
 	}
