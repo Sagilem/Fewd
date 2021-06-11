@@ -11,6 +11,7 @@ use Fewd\App\TApp;
 
 
 // Inits the app
+$app = new TApp();
 $app->Init();
 
 // Runs all tests
