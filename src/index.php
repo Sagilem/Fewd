@@ -11,7 +11,6 @@ use Fewd\App\TApp;
 
 
 // Inits the app
-$app = new TApp(array('Fewd.Translator.DefaultCulture' => 'dk'));
 $app->Init();
 
 // Runs all tests
