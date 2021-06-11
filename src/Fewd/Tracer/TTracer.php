@@ -540,7 +540,7 @@ class TTracer extends AModule
 		{
 			$this->Log()->Write($res);
 		}
-		elseif($this->Core()->IsStderr())
+		elseif($this->Core()->OutputFormat() === 'text/html')
 		{
 			echo $res;
 		}
@@ -585,7 +585,7 @@ class TTracer extends AModule
 	//------------------------------------------------------------------------------------------------------------------
 	public function MakeLog(string $filename, string $ret = "\n") : TLog
 	{
-		$res = new TLog($this, $filename, $ret);
+		$res = new TLog($this->Core(), $this, $filename, $ret);
 		$res->Init();
 
 		return $res;

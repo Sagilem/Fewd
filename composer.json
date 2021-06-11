@@ -30,12 +30,12 @@
 	{
 		"post-install-cmd":
 		[
-			"cd src/Fewd && composer install",
+			"cd www/Lib/Fewd && composer install",
 			"rm -r vendor"
 		],
 		"post-update-cmd":
 		[
-			"cd src/Fewd && composer update",
+			"cd www/Lib/Fewd && composer update",
 			"rm -r vendor"
 		]
 	}

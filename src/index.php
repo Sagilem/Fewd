@@ -4,24 +4,26 @@
 //----------------------------------------------------------------------------------------------------------------------
 
 
-include '../src/Fewd/Fewd.php';
+include 'Fewd/Fewd.php';
 
 
 use Fewd\App\TApp;
 
 
 // Inits the app
-$app = new TApp();
+$app = new TApp(array('Fewd.Translator.DefaultCulture' => 'dk'));
 $app->Init();
 
-
 // Runs all tests
-$app->Test();
+if($app->Core()->IsLocalhost())
+{
+	$app->Test();
+}
 
 
 // Defines routes
 $app->Router()->AddStrictRule('', 'HOMEPAGE');
-$app->Router()->AddRoute('HOMEPAGE', function() { echo 'This is my Homepage.'; });
+$app->Router()->AddAction('HOMEPAGE', function() { echo 'This is my Homepage.'; });
 
 
 // Runs app

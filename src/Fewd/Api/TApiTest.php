@@ -4,14 +4,15 @@
 //----------------------------------------------------------------------------------------------------------------------
 
 
-namespace Fewd\Translator;
+namespace Fewd\Api;
 
 
-use Fewd\Core\ATest;
 use Fewd\Core\TCore;
+use Fewd\Core\ATest;
+use Fewd\Router\TRouter;
 
 
-class TTranslatorTest extends ATest
+class TApiTest extends ATest
 {
 	//------------------------------------------------------------------------------------------------------------------
 	// Runs the test
@@ -21,18 +22,24 @@ class TTranslatorTest extends ATest
 		$core = new TCore();
 		$core->Init();
 
-		$translator = new TTranslator($core, 'en-US');
-		$translator->Init();
+		$router = new TRouter($core);
+		$router->Init();
 
-		// Checks
-		$this->Check($translator->DefaultCulture(), 'en-US');
+		$api = new TApi(
+			$core,
+			$router,
+			'apitest',
+			'My title',
+			'My description',
+			'My termsOfService',
+			'1.2.3',
+			'',
+			'My contactName',
+			'My contactUrl',
+			'My contactEmail');
 
-		$translator->SetCulture('dk-DK');
-		$this->Check($translator->Culture(), 'dk-DK');
+		$api->Init();
 
-		$translator->SetCulture('');
-		$this->Check($translator->Culture(), 'en-US');
-
-		$this->Check($translator->NeutralCulture('dk-DK'), 'dk');
+		// TODO
 	}
 }

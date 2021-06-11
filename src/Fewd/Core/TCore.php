@@ -40,6 +40,14 @@ class TCore extends AModule
 	private $_CurrentRelativeUrl;
 	public final function CurrentRelativeUrl() : string { return $this->_CurrentRelativeUrl; }
 
+	// Current path (i.e. the "path" part from the current url)
+	private $_CurrentPath;
+	public final function CurrentPath() : string { return $this->_CurrentPath; }
+
+	// Current args (equivalent to $_GET)
+	private $_CurrentArgs;
+	public final function CurrentArgs() : array { return $this->_CurrentArgs; }
+
 	// Current Http verb
 	private $_CurrentVerb;
 	public final function CurrentVerb() : string { return $this->_CurrentVerb; }
@@ -54,12 +62,6 @@ class TCore extends AModule
 	public       function Module(   string $id) : AModule       { return $this->_Modules[$id] ?? null; }
 	public       function HasModule(string $id) : bool          { return isset($this->_Modules[$id]); }
 	public       function AddModule(string $id, AModule $value) { $this->_Modules[$id] = $value; }
-
-	// Indicates if stderr output is allowed
-	private $_IsStderr = true;
-	public final function IsStderr() : bool  { return $this->_IsStderr;  }
-	public       function StderrOn()         { $this->_IsStderr = true;  }
-	public       function StderrOff()        { $this->_IsStderr = false; }
 
 	// Ticket generator
 	private $_Ticket = 1000;
@@ -89,6 +91,8 @@ class TCore extends AModule
 		$this->_Home               = $this->DefineHome();
 		$this->_CurrentAbsoluteUrl = $this->DefineCurrentAbsoluteUrl();
 		$this->_CurrentRelativeUrl = $this->DefineCurrentRelativeUrl();
+		$this->_CurrentPath        = $this->DefineCurrentPath();
+		$this->_CurrentArgs        = $this->DefineCurrentArgs();
 		$this->_CurrentVerb        = $this->DefineCurrentVerb();
 		$this->_IsFirstHit         = $this->DefineIsFirstHit();
 
@@ -116,6 +120,7 @@ class TCore extends AModule
 	protected function DefineHostRoot() : string
 	{
 		$path   = __DIR__;
+
 		$script = $_SERVER['SCRIPT_FILENAME'];
 
 		while(($path !== '/') && !$this->StartsWith($script, $path . '/'))
@@ -182,7 +187,7 @@ class TCore extends AModule
 			$res = substr($res, 0, -1);
 		}
 
-		return $res;
+		return strtolower($res);
 	}
 
 
@@ -192,6 +197,33 @@ class TCore extends AModule
 	protected function DefineCurrentRelativeUrl() : string
 	{
 		return $this->RelativeLink($this->CurrentAbsoluteUrl());
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Define : Current path
+	//------------------------------------------------------------------------------------------------------------------
+	protected function DefineCurrentPath() : string
+	{
+		$res = $this->CurrentRelativeUrl();
+
+		$pos = strpos($res, '?');
+
+		if($pos !== false)
+		{
+			return substr($res, 0, $pos);
+		}
+
+		return $res;
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Define : Current arguments
+	//------------------------------------------------------------------------------------------------------------------
+	protected function DefineCurrentArgs() : array
+	{
+		return $_GET;
 	}
 
 
@@ -228,6 +260,27 @@ class TCore extends AModule
 		// Otherwise :
 		// This is a first hit
 		return true;
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Gets the output format (depending on sent headers)
+	//------------------------------------------------------------------------------------------------------------------
+	public function OutputFormat()
+	{
+		$list = headers_list();
+
+		foreach($list as $v)
+		{
+			$v = strtolower($v);
+
+			if(substr($v, 0, 14) === 'content-type: ')
+			{
+				return substr($v, 15);
+			}
+		}
+
+		return 'text/html';
 	}
 
 
@@ -635,9 +688,9 @@ class TCore extends AModule
 
 
 	//------------------------------------------------------------------------------------------------------------------
-	// Indicates if a link is an absolute path
+	// Indicates if a link is an absolute file name
 	//------------------------------------------------------------------------------------------------------------------
-	public function IsAbsolutePath(string $link) : bool
+	public function IsAbsoluteFilename(string $link) : bool
 	{
 		$hostRoot = $this->HostRoot();
 
@@ -669,9 +722,9 @@ class TCore extends AModule
 			return substr($link, strlen($this->Protocol()) + strlen($this->Domain()) + 1);
 		}
 
-		// If it is an absolute path :
+		// If it is an absolute filename :
 		// Removes host root
-		if($this->IsAbsolutePath($link))
+		if($this->IsAbsoluteFilename($link))
 		{
 			return substr($link, strlen($this->HostRoot()) + 1);
 		}
@@ -706,9 +759,9 @@ class TCore extends AModule
 			return $link;
 		}
 
-		// If link is an absolute path :
-		// Transforms it into a relative path
-		if($this->IsAbsolutePath($link))
+		// If link is an absolute filename :
+		// Transforms it into a relative filename
+		if($this->IsAbsoluteFilename($link))
 		{
 			$link = $this->RelativeLink($link);
 		}
@@ -727,9 +780,9 @@ class TCore extends AModule
 
 
 	//------------------------------------------------------------------------------------------------------------------
-	// Turns a link into an absolute path
+	// Turns a link into an absolute file name
 	//------------------------------------------------------------------------------------------------------------------
-	public function AbsolutePath(string $link, bool $keepsExternal = true) : string
+	public function AbsoluteFilename(string $link, bool $keepsExternal = true) : string
 	{
 		// If link is an external url :
 		// Returns nothing
@@ -743,9 +796,9 @@ class TCore extends AModule
 			return '';
 		}
 
-		// If link is already an absolute path :
+		// If link is already an absolute filename :
 		// Returns it
-		if($this->IsAbsolutePath($link))
+		if($this->IsAbsoluteFilename($link))
 		{
 			return $link;
 		}

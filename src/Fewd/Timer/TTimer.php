@@ -8,7 +8,6 @@ namespace Fewd\Timer;
 
 
 use Fewd\Core\AModule;
-use Fewd\Core\TCore;
 
 
 class TTimer extends AModule
@@ -221,7 +220,7 @@ class TTimer extends AModule
 		}
 
 		// Outputs values
-		if($this->IsOutput() && $this->Core()->IsStderr())
+		if($this->IsOutput() && ($this->Core()->OutputFormat() === 'text/html'))
 		{
 			$show = '<div style="text-align:left;z-index:99999;margin:30px 10px 10px 10px;' . $this->Style() . '">';
 			$show.= '<span style="padding:5px;font:italic 11px sans-serif;color:#333;';
