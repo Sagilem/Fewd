@@ -14,6 +14,7 @@ use Fewd\Router\TRouter;
 use Fewd\Html\THtml;
 use Fewd\Bootstrap\TBootstrap;
 use Fewd\Translator\TTranslator;
+use Fewd\Api\TApi;
 
 use Fewd\Core\TCoreTest;
 use Fewd\Timer\TTimerTest;
@@ -22,6 +23,7 @@ use Fewd\Router\TRouterTest;
 use Fewd\Html\THtmlTest;
 use Fewd\Bootstrap\TBootstrapTest;
 use Fewd\Translator\TTranslatorTest;
+use Fewd\Api\TApiTest;
 
 
 class TApp
@@ -54,6 +56,10 @@ class TApp
 	private $_Translator;
 	public final function Translator() : TTranslator { return $this->_Translator; }
 
+	// Api
+	private $_Api;
+	public final function Api() : TApi { return $this->_Api; }
+
 	// Settings storage
 	protected $_Settings = array();
 
@@ -85,6 +91,7 @@ class TApp
 		$this->_Html         = $this->DefineHtml();
 		$this->_Bootstrap    = $this->DefineBootstrap();
 		$this->_Translator   = $this->DefineTranslator();
+		$this->_Api          = $this->DefineApi();
 
 		$this->InitMoments();
 	}
@@ -197,6 +204,40 @@ class TApp
 
 
 	//------------------------------------------------------------------------------------------------------------------
+	// Define : Api
+	//------------------------------------------------------------------------------------------------------------------
+	protected function DefineApi() : TApi
+	{
+		$root                  = $this->StringSetting('Fewd.Api.Root'                 , '');
+		$title                 = $this->StringSetting('Fewd.Api.Title'                , '');
+		$description           = $this->StringSetting('Fewd.Api.Description'          , '');
+		$termsOfService        = $this->StringSetting('Fewd.Api.TermsOfService'       , '');
+		$documentationVersion  = $this->StringSetting('Fewd.Api.DocumentationVersion' , '');
+		$implementationVersion = $this->StringSetting('Fewd.Api.ImplementationVersion', '');
+		$contactName           = $this->StringSetting('Fewd.Api.ContactName'          , '');
+		$contactUrl            = $this->StringSetting('Fewd.Api.ContactUrl'           , '');
+		$contactEmail          = $this->StringSetting('Fewd.Api.ContactEmail'         , '');
+
+		$res = new TApi(
+			$this->Core(),
+			$this->Router(),
+			$root,
+			$title,
+			$description,
+			$termsOfService,
+			$documentationVersion,
+			$implementationVersion,
+			$contactName,
+			$contactUrl,
+			$contactEmail);
+
+		$res->Init();
+
+		return $res;
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
 	// Gets a string setting
 	//------------------------------------------------------------------------------------------------------------------
 	public function StringSetting(string $id, string $default) : string
@@ -271,6 +312,7 @@ class TApp
 		$htmlTest       = new THtmlTest();
 		$bootstrapTest  = new TBootstrapTest();
 		$translatorTest = new TTranslatorTest();
+		$apiTest        = new TApiTest();
 
 		// Runs tests
 		$coreTest       ->Run();
@@ -280,6 +322,7 @@ class TApp
 		$htmlTest       ->Run();
 		$bootstrapTest  ->Run();
 		$translatorTest ->Run();
+		$apiTest        ->Run();
 	}
 
 

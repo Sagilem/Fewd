@@ -25,7 +25,6 @@ services:
       dockerfile: Dockerfile_www
     restart: always
     volumes:
-      - "./../www:/var/www/html"
-      - "./../src:/var/www/src"
+      - "./../src:/var/www/html"
     ports:
       - 80:80
