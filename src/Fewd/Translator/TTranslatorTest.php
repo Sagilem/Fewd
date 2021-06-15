@@ -45,5 +45,18 @@ class TTranslatorTest extends ATest
 
 		$translator->Load('en-US');
 		$this->CheckTrue($translator->IsLoaded('en-US'), 'Culture is not charged');
+
+		$translator->Learn('bye', 'fr', 'au revoir');
+		$translator->Learn('bye', 'en', 'good bye');
+
+		$this->Check($translator->Translate('bye', 'fr'), 'au revoir');
+		$this->Check($translator->Translate('bye', 'fr-FR'), 'au revoir');
+		$this->Check($translator->Translate('hello', 'en'),"[[hello]]");
+		$this->Check($translator->Translate('bye','en-US'),'good bye');
+		$this->Check($translator->Translate('hello','fr-FR'),"[[hello]]");
+		$this->Check($translator->Translate('hello', ''), "[[hello]]");
+
+		$translator->RecordDictionary('Fewd/Translator/Dict/');
+
 	}
 }

@@ -251,53 +251,84 @@ class TTranslator extends AModule
 		$this->_Translations[$culture][$code] = $translation;
 	}
 
+	//------------------------------------------------------------------------------------------------------------------
+	// Gets a translation in a given culture
+	//------------------------------------------------------------------------------------------------------------------
+	private function Translations(string $code, string $culture, array $replacements = array()) : string | bool 
+	{
+		// If culture was not loaded :
+		// Loads it
+		if (!$this->IsLoaded($culture)) {
+			$this->Load($culture);
+		}
+
+		// If expected translation is known :
+		// Returns it
+		// Or return false
+		if (array_key_exists($culture, $this->_Translations)) 
+		{
+			if (array_key_exists($code, $this->_Translations[$culture])) {
+				$res = $this->_Translations[$culture][$code];
+
+				foreach ($replacements as $k => $v) {
+					$res = str_replace('{{' . $k . '}}', $v, $res);
+				}
+				return $res;
+			}
+		}
+		return false;
+	}
 
 	//------------------------------------------------------------------------------------------------------------------
 	// Gets a translation in a given culture
 	//------------------------------------------------------------------------------------------------------------------
 	public function Translate(string $code, string $culture, array $replacements = array())
 	{
-		// If culture was not loaded :
-		// Loads it
-		if(!$this->IsLoaded($culture))
-		{
-			$this->Load($culture);
-		}
-
 		// If expected translation is known :
 		// Returns it
-		if(isset($this->_Translations[$culture][$code]))
-		{
-			$res = $this->_Translations[$culture][$code];
+		$res = $this->Translations($code, $culture);
 
-			foreach($replacements as $k => $v)
-			{
-				$res = str_replace('{{' . $k . '}}', $v, $res);
-			}
-
-			return $res;
-		}
+		if ($res) { return $res; } 
 
 		// Otherwise :
-		// Tries with neutral culture
+		// Set neutral culture
+		// Set default culture
+		// Set neutral default culture
+
 		$neutralCulture = $this->NeutralCulture($culture);
-		if($neutralCulture !== $culture)
+		$defaultCulture = $this->DefaultCulture();
+		$neutralDefaultCulture = $this->NeutralCulture($defaultCulture);
+
+		// Tries with neutral culture
+		if ($neutralCulture !== $culture) 
 		{
-			return $this->Translate($code, $neutralCulture, $replacements);
+			$res = $this->Translations($code, $neutralCulture);
+			if ($res) { return $res;}
 		}
 
 		// Otherwise :
 		// Tries with default culture
-		if($culture !== $this->DefaultCulture())
+		if ($defaultCulture !== $culture 
+		 && $defaultCulture !== $neutralCulture) 
 		{
-			return $this->Translate($code, $this->DefaultCulture(), $replacements);
+			$res = $this->Translations($code, $defaultCulture);
+			if ($res) { return $res; }
 		}
-
+		
+		// Otherwise :
+		// Tries with neutral default culture
+		if ($neutralDefaultCulture !== $culture
+		 && $neutralDefaultCulture !== $neutralCulture
+		 && $neutralDefaultCulture !== $defaultCulture)
+		{
+			$res = $this->Translations($code, $neutralDefaultCulture);
+			if ($res) { return $res; } 
+		}
+			
 		// Otherwise :
 		// Return the code itself
 		return '[[' . $code . ']]';
 	}
-
 
 	//------------------------------------------------------------------------------------------------------------------
 	// Says something in the current culture
