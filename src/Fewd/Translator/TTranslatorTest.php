@@ -34,5 +34,16 @@ class TTranslatorTest extends ATest
 		$this->Check($translator->Culture(), 'en-US');
 
 		$this->Check($translator->NeutralCulture('dk-DK'), 'dk');
+		$this->Check($translator->NeutralCulture('en'), 'en');
+		$this->Check($translator->NeutralCulture(''), '');
+
+		$translator->Load('');
+		$this->CheckTrue($translator->IsLoaded(''),'Culture is not charged');
+
+		$translator->Load('fr');
+		$this->CheckTrue($translator->IsLoaded('fr'), 'Culture is not charged');
+
+		$translator->Load('en-US');
+		$this->CheckTrue($translator->IsLoaded('en-US'), 'Culture is not charged');
 	}
 }
