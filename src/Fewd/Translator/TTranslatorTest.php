@@ -21,14 +21,28 @@ class TTranslatorTest extends ATest
 		$core = new TCore();
 		$core->Init();
 
+		// Checks
+		// With no culture when TTranslator object is instanciated
+		$translator = new TTranslator($core, '');
+		$translator->Init();
+
+		$this->Check($translator->DefaultCulture(), 'en');
+		$this->Check($translator->Culture(), 'fr-FR');
+		$this->Check($translator->NeutralCulture($translator->Culture()), 'fr');
+
+		$translator->SetCulture('fr-FR');
+		$this->Check($translator->Culture(), 'fr-FR');
+		$this->Check($translator->NeutralCulture($translator->Culture()), 'fr');
+
+		$this->Check($translator->IsLoaded($translator->Culture()), false);
+		$translator->Load($translator->Culture());
+		$this->Check($translator->IsLoaded($translator->Culture()), true);
+
+		// With culture when TTranslator object is instanciated
 		$translator = new TTranslator($core, 'en-US');
 		$translator->Init();
 
-		// Checks
 		$this->Check($translator->DefaultCulture(), 'en-US');
-
-		$translator->SetCulture('dk-DK');
-		$this->Check($translator->Culture(), 'dk-DK');
 
 		$translator->SetCulture('');
 		$this->Check($translator->Culture(), 'en-US');
@@ -38,25 +52,21 @@ class TTranslatorTest extends ATest
 		$this->Check($translator->NeutralCulture(''), '');
 
 		$translator->Load('');
-		$this->CheckTrue($translator->IsLoaded(''),'Culture is not charged');
-
-		$translator->Load('fr');
-		$this->CheckTrue($translator->IsLoaded('fr'), 'Culture is not charged');
+		$this->CheckTrue($translator->IsLoaded(''), 'Culture is not loaded');
 
 		$translator->Load('en-US');
-		$this->CheckTrue($translator->IsLoaded('en-US'), 'Culture is not charged');
+		$this->CheckTrue($translator->IsLoaded('en-US'), 'Culture is not loaded');
 
 		$translator->Learn('bye', 'fr', 'au revoir');
 		$translator->Learn('bye', 'en', 'good bye');
 
 		$this->Check($translator->Translate('bye', 'fr'), 'au revoir');
 		$this->Check($translator->Translate('bye', 'fr-FR'), 'au revoir');
-		$this->Check($translator->Translate('hello', 'en'),"[[hello]]");
-		$this->Check($translator->Translate('bye','en-US'),'good bye');
-		$this->Check($translator->Translate('hello','fr-FR'),"[[hello]]");
+		$this->Check($translator->Translate('hello', 'en'), "[[hello]]");
+		$this->Check($translator->Translate('bye', 'en-US'), 'good bye');
+		$this->Check($translator->Translate('hello', 'fr-FR'), "[[hello]]");
 		$this->Check($translator->Translate('hello', ''), "[[hello]]");
 
-		$translator->RecordDictionary('Fewd/Translator/Dict/');
-
+		$this->Check($translator->Say('bye'), 'good bye');
 	}
 }
