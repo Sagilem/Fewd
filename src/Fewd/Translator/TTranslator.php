@@ -254,7 +254,13 @@ class TTranslator extends AModule
 	//------------------------------------------------------------------------------------------------------------------
 	// Search the translation in a given culture or another culture
 	//------------------------------------------------------------------------------------------------------------------
-	private function Translation(string $code, string $culture, array $cultureToTry, array $replacements, array $tryedCulture = array(), int $index = 0) : string
+	protected function Translation(
+		string $code, 
+		string $culture, 
+		array $cultureToTry, 
+		array $replacements, 
+		array $tryedCulture = array(), 
+		int $index = 0) : string
 	{
 
 		// If all the possible values of culture are not already tryed :
