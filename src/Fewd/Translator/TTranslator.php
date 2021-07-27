@@ -251,58 +251,86 @@ class TTranslator extends AModule
 		$this->_Translations[$culture][$code] = $translation;
 	}
 
-
 	//------------------------------------------------------------------------------------------------------------------
-	// Gets a translation in a given culture
+	// Search the translation in a given culture or another culture
 	//------------------------------------------------------------------------------------------------------------------
-	public function Translate(string $code, string $culture, array $replacements = array())
+	protected function Translation(
+		string $code, 
+		string $culture, 
+		array $cultureToTry, 
+		array $replacements, 
+		array $tryedCulture = array(), 
+		int $index = 0) : string
 	{
-		// If culture was not loaded :
-		// Loads it
-		if(!$this->IsLoaded($culture))
-		{
-			$this->Load($culture);
-		}
 
-		// If expected translation is known :
-		// Returns it
-		if(isset($this->_Translations[$culture][$code]))
+		// If all the possible values of culture are not already tryed :
+		// Continue to try
+		if(count($tryedCulture) < count($cultureToTry)) 
 		{
-			$res = $this->_Translations[$culture][$code];
-
-			foreach($replacements as $k => $v)
+			// If the actual culture isn't already tryed :
+			// Try it
+			if (!in_array($culture, $tryedCulture)) 
 			{
-				$res = str_replace('{{' . $k . '}}', $v, $res);
+
+				// If culture was not loaded :
+				// Loads it
+				if ($this->IsLoaded($culture) === false) 
+				{
+					$this->Load($culture);
+				}
+
+				// If expected translation is known :
+				// Returns it
+				if (array_key_exists($culture, $this->_Translations)) 
+				{
+					if (array_key_exists($code, $this->_Translations[$culture])) 
+					{
+						$res = $this->_Translations[$culture][$code];
+
+						foreach ($replacements as $k => $v) 
+						{
+							$res = str_replace('{{' . $k . '}}', $v, $res);
+						}
+						return $res;
+					}
+				}
 			}
 
-			return $res;
-		}
+			// Or try to translate with another culture
+			array_push($tryedCulture, $culture);
+			$culture = $cultureToTry[$index];
+			$index += 1;
+			return $this->Translation($code, $culture, $cultureToTry, $replacements, $tryedCulture, $index);
 
-		// Otherwise :
-		// Tries with neutral culture
+		// Or return the code itself
+		} 
+		else {
+			return '[[' . $code . ']]';
+		}
+	}
+	//------------------------------------------------------------------------------------------------------------------
+	// Gets a translation in a given culture 
+	//------------------------------------------------------------------------------------------------------------------
+	public function Translate(string $code, string $culture, array $replacements = array()) : string
+	{
+		// Define all the possible values of culture
 		$neutralCulture = $this->NeutralCulture($culture);
-		if($neutralCulture !== $culture)
-		{
-			return $this->Translate($code, $neutralCulture, $replacements);
-		}
+		$defaultCulture = $this->DefaultCulture();
+		$neutralDefaultCulture = $this->NeutralCulture($defaultCulture);
 
-		// Otherwise :
-		// Tries with default culture
-		if($culture !== $this->DefaultCulture())
-		{
-			return $this->Translate($code, $this->DefaultCulture(), $replacements);
-		}
+		// Group all the possible values of culture in array
+		$cultureToTry = [ $neutralCulture, $defaultCulture, $neutralDefaultCulture ];
 
-		// Otherwise :
-		// Return the code itself
-		return '[[' . $code . ']]';
+		// Search the translation and return the résult
+		$res = $this->Translation($code, $culture, $cultureToTry, $replacements);
+
+		return $res;
 	}
 
-
 	//------------------------------------------------------------------------------------------------------------------
-	// Says something in the current culture
+	// Says something in the current culture 
 	//------------------------------------------------------------------------------------------------------------------
-	public function Say(string $code, array $replacements = array())
+	public function Say(string $code, array $replacements = array()) : string
 	{
 		return $this->Translate($code, $this->Culture(), $replacements);
 	}
