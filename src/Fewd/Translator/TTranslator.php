@@ -252,83 +252,87 @@ class TTranslator extends AModule
 	}
 
 	//------------------------------------------------------------------------------------------------------------------
-	// Search the translation in a given culture or another culture
+	// Searches the translation in a given culture or another culture
 	//------------------------------------------------------------------------------------------------------------------
 	protected function Translation(
-		string $code, 
-		string $culture, 
-		array $cultureToTry, 
-		array $replacements, 
-		array $tryedCulture = array(), 
+		string $code,
+		string $culture,
+		array  $culturesToTry,
+		array  $replacements,
+		array  $triedCultures = array(),
 		int $index = 0) : string
 	{
 
-		// If all the possible values of culture are not already tryed :
-		// Continue to try
-		if(count($tryedCulture) < count($cultureToTry)) 
+		// If all the possible values of culture are not already tried :
+		// Continues to try
+		if(count($triedCultures) < count($culturesToTry))
 		{
-			// If the actual culture isn't already tryed :
-			// Try it
-			if (!in_array($culture, $tryedCulture)) 
+			// If the actual culture isn't already tried :
+			// Tries it
+			if(!in_array($culture, $triedCultures))
 			{
-
 				// If culture was not loaded :
 				// Loads it
-				if ($this->IsLoaded($culture) === false) 
+				if($this->IsLoaded($culture) === false)
 				{
 					$this->Load($culture);
 				}
 
 				// If expected translation is known :
 				// Returns it
-				if (array_key_exists($culture, $this->_Translations)) 
+				if(array_key_exists($culture, $this->_Translations))
 				{
-					if (array_key_exists($code, $this->_Translations[$culture])) 
+					if(array_key_exists($code, $this->_Translations[$culture]))
 					{
 						$res = $this->_Translations[$culture][$code];
 
-						foreach ($replacements as $k => $v) 
+						foreach($replacements as $k => $v)
 						{
 							$res = str_replace('{{' . $k . '}}', $v, $res);
 						}
+
 						return $res;
 					}
 				}
 			}
 
-			// Or try to translate with another culture
-			array_push($tryedCulture, $culture);
-			$culture = $cultureToTry[$index];
+			// Or tries to translate with another culture
+			array_push($triedCultures, $culture);
+			$culture = $culturesToTry[$index];
 			$index += 1;
-			return $this->Translation($code, $culture, $cultureToTry, $replacements, $tryedCulture, $index);
 
-		// Or return the code itself
-		} 
-		else {
+			return $this->Translation($code, $culture, $culturesToTry, $replacements, $triedCultures, $index);
+		}
+
+		// Or returns the code itself
+		else
+		{
 			return '[[' . $code . ']]';
 		}
 	}
+
+
 	//------------------------------------------------------------------------------------------------------------------
-	// Gets a translation in a given culture 
+	// Gets a translation in a given culture
 	//------------------------------------------------------------------------------------------------------------------
 	public function Translate(string $code, string $culture, array $replacements = array()) : string
 	{
 		// Define all the possible values of culture
-		$neutralCulture = $this->NeutralCulture($culture);
-		$defaultCulture = $this->DefaultCulture();
+		$neutralCulture        = $this->NeutralCulture($culture);
+		$defaultCulture        = $this->DefaultCulture();
 		$neutralDefaultCulture = $this->NeutralCulture($defaultCulture);
 
 		// Group all the possible values of culture in array
-		$cultureToTry = [ $neutralCulture, $defaultCulture, $neutralDefaultCulture ];
+		$culturesToTry = [$neutralCulture, $defaultCulture, $neutralDefaultCulture];
 
 		// Search the translation and return the résult
-		$res = $this->Translation($code, $culture, $cultureToTry, $replacements);
+		$res = $this->Translation($code, $culture, $culturesToTry, $replacements);
 
 		return $res;
 	}
 
 	//------------------------------------------------------------------------------------------------------------------
-	// Says something in the current culture 
+	// Says something in the current culture
 	//------------------------------------------------------------------------------------------------------------------
 	public function Say(string $code, array $replacements = array()) : string
 	{
