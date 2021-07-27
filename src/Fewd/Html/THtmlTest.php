@@ -24,7 +24,7 @@ class THtmlTest extends ATest
 		$html = new THtml($core);
 		$html->Init();
 
-		$text = '<html><head><title>TITLE</title></head><body>TEXT</body></html>';
-		$this->Check($html->HtmlToPlainText($text), 'TITLETEXT');
+		$this->Check($html->OpeningTag('p', array('style' => 'background:red')), '<p style="background:red"');
+		$this->Check($html->OpeningTag('', array('' => '')), '< =""');
 	}
 }

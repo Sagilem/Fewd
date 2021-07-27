@@ -44,6 +44,29 @@ abstract class ATest
 
 
 	//------------------------------------------------------------------------------------------------------------------
+	// Gets the position of the first difference between two strings
+	//------------------------------------------------------------------------------------------------------------------
+	protected function DifferencePosition(string $value1, string $value2) : int
+	{
+		if($value1 === $value2)
+		{
+			return -1;
+		}
+
+		$res     = 0;
+		$length1 = strlen($value1);
+		$length2 = strlen($value2);
+
+		while(($res < $length1) && ($res < $length2) && (substr($value1, $res, 1) === substr($value2, $res, 1)))
+		{
+			$res++;
+		}
+
+		return $res;
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
 	// Outputs a given message
 	//------------------------------------------------------------------------------------------------------------------
 	protected function Output(string $message)
@@ -57,6 +80,60 @@ abstract class ATest
 		$text.= '">' . $message . '</pre>';
 
 		echo $text;
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Formats a failure value
+	//------------------------------------------------------------------------------------------------------------------
+	protected function FailureValue(string $value, string $comparisonValue = '') : string
+	{
+		// If value is NULL :
+		// Returns a message
+		if($value === null)
+		{
+			return '<null>';
+		}
+
+		// If value is not string :
+		// Returns the value turned into a string
+		if(!is_string($value))
+		{
+			return strval($value);
+		}
+
+		// No html entity
+		$res             = htmlentities($value          , ENT_QUOTES, 'UTF-8');
+		$comparisonValue = htmlentities($comparisonValue, ENT_QUOTES, 'UTF-8');
+
+		// If a comparison value was provided :
+		// Formats value to enhance the difference
+		if($comparisonValue !== '')
+		{
+			$pos = $this->DifferencePosition($res, $comparisonValue);
+
+			if($pos !== -1)
+			{
+				$res = substr($res, 0, $pos) . '<strong style="color:white">--></strong>' . substr($res, $pos);
+			}
+		}
+
+		// If value is a multiline string :
+		// Adds some space around it, for a better display
+		if(strpos($res, "\n") != false)
+		{
+			$res = "\n" . $res . "\n";
+		}
+
+		// Otherwise :
+		// Adds quotes
+		else
+		{
+			$res = '"' . $res . '"';
+		}
+
+		// Result
+		return $res;
 	}
 
 
@@ -89,26 +166,11 @@ abstract class ATest
 		// Adds them
 		if(func_num_args() > 4)
 		{
-			if($foundValue === null)
-			{
-				$foundValue = '<null>';
-			}
-			elseif(is_string($foundValue))
-			{
-				$foundValue = '"' . $foundValue . '"';
-			}
+			$foundValue    = $this->FailureValue($foundValue   , $expectedValue);
+			$expectedValue = $this->FailureValue($expectedValue);
 
-			if($expectedValue === null)
-			{
-				$expectedValue = '<null>';
-			}
-			elseif(is_string($expectedValue))
-			{
-				$expectedValue = '"' . $expectedValue . '"';
-			}
-
-			$res.= '    found    : ' . $foundValue . "\n";
-			$res.= '    expected : ' . $expectedValue;
+			$res.= '    found    : <span style="color:red">'  . $foundValue    . '</span>' . "\n";
+			$res.= '    expected : <span style="color:blue">' . $expectedValue . '</span>';
 		}
 
 		// Result
@@ -183,13 +245,19 @@ abstract class ATest
 	//------------------------------------------------------------------------------------------------------------------
 	// Checks a given result
 	//------------------------------------------------------------------------------------------------------------------
-	public function Check(string|int|float $foundValue, string|int|float $expectedValue, string $message = '')
+	public function Check(
+		string|int|float|null $foundValue,
+		string|int|float|null $expectedValue,
+		string                $message      = '')
 	{
 		// Alias
 		$this->CheckEQ($foundValue, $expectedValue, $message);
 	}
 
-	public function CheckEQ(string|int|float $foundValue, string|int|float $expectedValue, string $message = '')
+	public function CheckEQ(
+		string|int|float|null $foundValue,
+		string|int|float|null $expectedValue,
+		string                $message      = '')
 	{
 		// Double values must be compared using an epsilon delta
 		if(is_double($foundValue) || is_double($expectedValue))
@@ -250,6 +318,61 @@ abstract class ATest
 		if(!preg_match($pattern, $text))
 		{
 			$this->Raise($message, $text, 'pattern : ' . $pattern);
+		}
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Checks if an array exactly equals to another array
+	//------------------------------------------------------------------------------------------------------------------
+	public function CheckArray(array $foundArray, array $expectedArray, string $message = '')
+	{
+		if($foundArray !== $expectedArray)
+		{
+			$this->Raise($message, serialize($foundArray), serialize($expectedArray));
+		}
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Checks if an array has the given keys
+	//------------------------------------------------------------------------------------------------------------------
+	public function CheckArrayKeys(array $foundArray, array $expectedKeys, string $message = '')
+	{
+		foreach($expectedKeys as $v)
+		{
+			if(!isset($foundArray[$v]))
+			{
+				$this->Raise($message, '', $v);
+			}
+		}
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Checks if a given key exists in a given array
+	//------------------------------------------------------------------------------------------------------------------
+	public function CheckArrayExist(array $array, string|int $key, string $message = '')
+	{
+		if(!isset($array[$key]))
+		{
+			$this->Raise($message);
+		}
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Checks if a single value exists in a given array, for a given key, and is equal to the expected value
+	//------------------------------------------------------------------------------------------------------------------
+	public function CheckArrayValue(array $array, string|int $key, string|int|float|bool $value, string $message = '')
+	{
+		if(!isset($array[$key]))
+		{
+			$this->Raise($message);
+		}
+		elseif($array[$key] !== $value)
+		{
+			$this->Raise($message, $array[$key], $value);
 		}
 	}
 

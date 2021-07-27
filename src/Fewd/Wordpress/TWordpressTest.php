@@ -4,32 +4,26 @@
 //----------------------------------------------------------------------------------------------------------------------
 
 
-namespace Fewd\Api;
+namespace Fewd\Wordpress;
 
 
-use Fewd\Core\TCore;
 use Fewd\Core\ATest;
-use Fewd\Router\TRouter;
+use Fewd\Core\TCore;
 
 
-class TApiTest extends ATest
+class TWordpressTest extends ATest
 {
 	//------------------------------------------------------------------------------------------------------------------
 	// Runs the test
 	//------------------------------------------------------------------------------------------------------------------
 	public function Run()
 	{
-		// Inits the Api
 		$core = new TCore();
 		$core->Init();
 
-		$router = new TRouter($core);
-		$router->Init();
+		$wordpress = new TWordpress($core);
+		$wordpress->Init();
 
-		$api = new TApi($core, $router);
-		$api->Init();
-
-		// TODO
-		// Difficult to test, since Api needs some context from the HTTP query (headers, arguments...)
+		// No more test can be done at this stage, since usage needs a visual output
 	}
 }

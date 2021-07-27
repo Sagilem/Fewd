@@ -183,7 +183,7 @@ class TTranslator extends AModule
 		foreach($this->_Translations as $k => $v)
 		{
 			$fewd       = &$this->_Translations[$k];
-			$dictionary = $this->Core()->Join($path, $k . 'php');
+			$dictionary = $this->Core()->Join($path, $k . '.php');
 			if(file_exists($dictionary))
 			{
 				try

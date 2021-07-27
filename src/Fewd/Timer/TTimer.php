@@ -15,16 +15,16 @@ class TTimer extends AModule
 	// Clocks
 	private $_Clocks = array();
 	protected final function Clocks() : array                   { return $this->_Clocks; }
-	protected       function Clock(   string $id) : float       { return $this->_Clocks[$id] ?? 0.0; }
-	protected       function HasClock(string $id) : bool        { return isset($this->_Clocks[$id]); }
+	protected final function Clock(   string $id) : float       { return $this->_Clocks[$id] ?? 0.0; }
+	protected final function HasClock(string $id) : bool        { return isset($this->_Clocks[$id]); }
 	protected       function SetClock(string $id, float $value) { $this->_Clocks[$id] = $value; }
 	protected       function DelClock(string $id)               { unset($this->_Clocks[$id]); }
 
 	// Breaks
 	private $_Breaks = array();
 	protected final function Breaks() : array                   { return $this->_Breaks; }
-	protected       function Break(   string $id) : float       { return $this->_Breaks[$id] ?? 0.0; }
-	protected       function HasBreak(string $id) : bool        { return isset($this->_Breaks[$id]); }
+	protected final function Break(   string $id) : float       { return $this->_Breaks[$id] ?? 0.0; }
+	protected final function HasBreak(string $id) : bool        { return isset($this->_Breaks[$id]); }
 	protected       function SetBreak(string $id, float $value) { $this->_Breaks[$id] = $value; }
 	protected       function DelBreak(string $id)               { unset ($this->_Breaks[$id]); }
 

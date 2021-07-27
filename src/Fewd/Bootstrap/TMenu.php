@@ -20,9 +20,9 @@ class TMenu extends AComponent
 
 	// Items
 	private $_Items = array();
-	public final function Items()             : array { return $this->_Items; }
+	public final function Items(): array              { return $this->_Items;                 }
 	public final function Item(   string $id) : array { return $this->_Items[$id] ?? array(); }
-	public final function HasItem(string $id) : bool  { return isset($this->_Items[$id]); }
+	public final function HasItem(string $id) : bool  { return isset($this->_Items[$id]);     }
 
 
 	//------------------------------------------------------------------------------------------------------------------
