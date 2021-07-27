@@ -20,14 +20,13 @@ if($app->Core()->IsLocalhost())
 	$app->Test();
 }
 
-
 // Defines routes
 $app->Router()->AddStrictRule('', 'HOMEPAGE');
 $app->Router()->AddAction('HOMEPAGE', function() { echo 'This is my Homepage.'; });
 
-
 // Runs app
 $app->Run();
+
 
 
 //----------------------------------------------------------------------------------------------------------------------

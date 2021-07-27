@@ -14,13 +14,13 @@ use Less_Parser;
 
 class THtml extends AModule
 {
- 	// Moments
-	 protected $_Moments = array();
+	// Moments
+	protected $_Moments = array();
 
-	 // Linked resources
-	 private $_Resources = array();
-	 public function HasResource(string $id) : bool { return isset($this->_Resources[$id]); }
-	 public function AddResource(string $id)        { $this->_Resources[$id] = '';          }
+	// Linked resources
+	private $_Resources = array();
+	public final function HasResource(string $id) : bool { return isset($this->_Resources[$id]); }
+	public       function AddResource(string $id)        { $this->_Resources[$id] = '';          }
 
 	// Less compiler
 	private $_LessCompiler = null;

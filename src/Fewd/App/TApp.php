@@ -14,6 +14,7 @@ use Fewd\Router\TRouter;
 use Fewd\Html\THtml;
 use Fewd\Bootstrap\TBootstrap;
 use Fewd\Translator\TTranslator;
+use Fewd\Data\TData;
 use Fewd\Api\TApi;
 
 use Fewd\Core\TCoreTest;
@@ -23,6 +24,7 @@ use Fewd\Router\TRouterTest;
 use Fewd\Html\THtmlTest;
 use Fewd\Bootstrap\TBootstrapTest;
 use Fewd\Translator\TTranslatorTest;
+use Fewd\Data\TDataTest;
 use Fewd\Api\TApiTest;
 
 
@@ -55,6 +57,10 @@ class TApp
 	// Translator
 	private $_Translator;
 	public final function Translator() : TTranslator { return $this->_Translator; }
+
+	// Data
+	private $_Data;
+	public final function Data() : TData { return $this->_Data; }
 
 	// Api
 	private $_Api;
@@ -91,6 +97,7 @@ class TApp
 		$this->_Html         = $this->DefineHtml();
 		$this->_Bootstrap    = $this->DefineBootstrap();
 		$this->_Translator   = $this->DefineTranslator();
+		$this->_Data         = $this->DefineData();
 		$this->_Api          = $this->DefineApi();
 
 		$this->InitMoments();
@@ -204,32 +211,57 @@ class TApp
 
 
 	//------------------------------------------------------------------------------------------------------------------
+	// Define : Data
+	//------------------------------------------------------------------------------------------------------------------
+	protected function DefineData() : TData
+	{
+		$res = new TData($this->Core(), $this->Tracer());
+		$res->Init();
+
+		return $res;
+	}
+
+
+
+	//------------------------------------------------------------------------------------------------------------------
 	// Define : Api
 	//------------------------------------------------------------------------------------------------------------------
 	protected function DefineApi() : TApi
 	{
-		$root                  = $this->StringSetting('Fewd.Api.Root'                 , '');
-		$title                 = $this->StringSetting('Fewd.Api.Title'                , '');
-		$description           = $this->StringSetting('Fewd.Api.Description'          , '');
-		$termsOfService        = $this->StringSetting('Fewd.Api.TermsOfService'       , '');
-		$documentationVersion  = $this->StringSetting('Fewd.Api.DocumentationVersion' , '');
-		$implementationVersion = $this->StringSetting('Fewd.Api.ImplementationVersion', '');
-		$contactName           = $this->StringSetting('Fewd.Api.ContactName'          , '');
-		$contactUrl            = $this->StringSetting('Fewd.Api.ContactUrl'           , '');
-		$contactEmail          = $this->StringSetting('Fewd.Api.ContactEmail'         , '');
+		$root                   = $this->StringSetting('Fewd.Api.Root'                  , '');
+		$docVersion             = $this->StringSetting('Fewd.Api.DocVersion'            , '');
+		$docUrl                 = $this->StringSetting('Fewd.Api.DocUrl'                , '');
+		$logoUrl                = $this->StringSetting('Fewd.Api.LogoUrl'               , '');
+		$faviconUrl             = $this->StringSetting('Fewd.Api.FaviconUrl'            , '');
+		$title                  = $this->StringSetting('Fewd.Api.Title'                 , '');
+		$description            = $this->StringSetting('Fewd.Api.Description'           , '');
+		$termsOfService         = $this->StringSetting('Fewd.Api.TermsOfService'        , '');
+		$contactName            = $this->StringSetting('Fewd.Api.ContactName'           , '');
+		$contactUrl             = $this->StringSetting('Fewd.Api.ContactUrl'            , '');
+		$contactEmail           = $this->StringSetting('Fewd.Api.ContactEmail'          , '');
+		$licenseName            = $this->StringSetting('Fewd.Api.LicenseName'           , '');
+		$licenseUrl             = $this->StringSetting('Fewd.Api.LicenseUrl'            , '');
+		$externalDocDescription = $this->StringSetting('Fewd.Api.ExternalDocDescription', '');
+		$externalDocUrl         = $this->StringSetting('Fewd.Api.ExternalDocUrl'        , '');
 
 		$res = new TApi(
 			$this->Core(),
 			$this->Router(),
 			$root,
+			$docVersion,
+			$docUrl,
+			$logoUrl,
+			$faviconUrl,
 			$title,
 			$description,
 			$termsOfService,
-			$documentationVersion,
-			$implementationVersion,
 			$contactName,
 			$contactUrl,
-			$contactEmail);
+			$contactEmail,
+			$licenseName,
+			$licenseUrl,
+			$externalDocDescription,
+			$externalDocUrl);
 
 		$res->Init();
 
@@ -312,6 +344,7 @@ class TApp
 		$htmlTest       = new THtmlTest();
 		$bootstrapTest  = new TBootstrapTest();
 		$translatorTest = new TTranslatorTest();
+		$dataTest       = new TDataTest();
 		$apiTest        = new TApiTest();
 
 		// Runs tests
@@ -322,6 +355,7 @@ class TApp
 		$htmlTest       ->Run();
 		$bootstrapTest  ->Run();
 		$translatorTest ->Run();
+		$dataTest       ->Run();
 		$apiTest        ->Run();
 	}
 
