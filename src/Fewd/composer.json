@@ -31,11 +31,13 @@
 		"post-install-cmd":
 		[
 			"cd Html && composer install",
+			"cd Api && composer install",
 			"rm -r vendor"
 		],
 		"post-update-cmd":
 		[
 			"cd Html && composer update",
+			"cd Api && composer update",
 			"rm -r vendor"
 		]
 	}

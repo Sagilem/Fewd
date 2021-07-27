@@ -118,6 +118,16 @@ class TLog extends AThing
 		// Opens the log file for writing
 		if($this->Handle() === null)
 		{
+			// Ensures that the log directory exists
+			if(!is_dir($this->Tracer()->LogDirname()))
+			{
+				if(mkdir($this->Tracer()->LogDirname(), 0700, true) === false)
+				{
+					return;
+				}
+			}
+
+			// Opens handle
 			$path = $this->Core()->Join(
 				$this->Core()->HostRoot(),
 				$this->Tracer()->LogDirname(),

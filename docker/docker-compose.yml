@@ -1,6 +1,7 @@
 version: '3.8'
 services:
   db:
+    container_name: 'fewd-db'
     build:
       context: .
       dockerfile: Dockerfile_db
@@ -9,7 +10,9 @@ services:
       MYSQL_ROOT_PASSWORD: root
     ports:
       - 3306:3306
-  db_pma:
+
+  pma:
+    container_name: 'fewd-pma'
     image: phpmyadmin/phpmyadmin:5.0.0
     depends_on:
       - db
@@ -19,7 +22,9 @@ services:
       MYSQL_ROOT_PASSWORD: root
       PMA_USER: root
       PMA_PASSWORD: root
+
   www:
+    container_name: 'fewd-www'
     build:
       context: .
       dockerfile: Dockerfile_www

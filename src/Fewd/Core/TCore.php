@@ -59,8 +59,8 @@ class TCore extends AModule
 	// Modules
 	private $_Modules = array();
 	public final function Modules() : array                     { return $this->_Modules; }
-	public       function Module(   string $id) : AModule       { return $this->_Modules[$id] ?? null; }
-	public       function HasModule(string $id) : bool          { return isset($this->_Modules[$id]); }
+	public final function Module(   string $id) : AModule       { return $this->_Modules[$id] ?? null; }
+	public final function HasModule(string $id) : bool          { return isset($this->_Modules[$id]); }
 	public       function AddModule(string $id, AModule $value) { $this->_Modules[$id] = $value; }
 
 	// Ticket generator
@@ -446,6 +446,101 @@ class TCore extends AModule
 	public function HtmlEntities(string $text) : string
 	{
 		return htmlentities($text, ENT_QUOTES, 'UTF-8');
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Concatenates string parts with a given separator
+	//------------------------------------------------------------------------------------------------------------------
+	public function Concatenate(string $separator, array|string $parts) : string
+	{
+		// Gets parts
+		if(!is_array($parts))
+		{
+			$parts = func_get_args();
+			array_Shift($parts);
+		}
+
+		// For each part :
+		$res = '';
+		$sep = '';
+
+		foreach($parts as $v)
+		{
+			// If current part is empty,
+			// Or is not a string :
+			// Ignores it
+			if(($v === '') || !is_string($v))
+			{
+				continue;
+			}
+
+			// Otherwise :
+			// Adds it
+			$res.= $sep . $v;
+			$sep = $separator;
+		}
+
+		// Result
+		return $res;
+	}
+
+
+
+
+	//==================================================================================================================
+	//
+	// ARRAYS HELPERS
+	//
+	//==================================================================================================================
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Deep-converts an object into an array
+	//------------------------------------------------------------------------------------------------------------------
+	public function ObjectToArray(object $object) : array
+	{
+		$res = array();
+		foreach($object as $k => $v)
+		{
+			$res[$k] = $this->ObjectToArray($v);
+		}
+
+        return $res;
+    }
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Generates a string with the first values from a given array
+	//------------------------------------------------------------------------------------------------------------------
+	public function ArrayToString(
+		array  $array,
+		int    $limit     = 5,
+		string $separator = ', ',
+		string $ellipsis  = '...',
+		string $pattern   = '{{VALUE}}') : string
+	{
+		$res = '';
+		$sep = '';
+		$n   = 0;
+
+		foreach($array as $v)
+		{
+			$n++;
+			if($n > $limit)
+			{
+				$res.= $sep . $ellipsis;
+				break;
+			}
+
+			$cur = strval($v);
+			$cur = str_replace('{{VALUE}}', $cur, $pattern);
+
+			$res.= $sep . $cur;
+			$sep = $separator;
+		}
+
+		return $res;
 	}
 
 
@@ -1055,9 +1150,54 @@ class TCore extends AModule
 
 	//==================================================================================================================
 	//
+	// DATETIME HELPERS
+	//
+	//==================================================================================================================
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Gets current date and time
+	//------------------------------------------------------------------------------------------------------------------
+	public function Now() : string
+	{
+		return date('YmdHis');
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Gets current date, time and microtime
+	//------------------------------------------------------------------------------------------------------------------
+	public function MicroNow() : string
+	{
+		// Gets the decimal part of current microtime
+		$microtime   = microtime(true);
+		$decimalPart = $microtime - (int)$microtime;
+		$microtime   = $decimalPart * 1000000000;
+
+		// Generates the datemicrotime
+		return date('YmdHis') . substr($microtime, 0, 8);
+	}
+
+
+
+
+	//==================================================================================================================
+	//
 	// INTERNET HELPERS
 	//
 	//==================================================================================================================
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Removes a given argument from a given url
+	//------------------------------------------------------------------------------------------------------------------
+	public function RemoveArgumentFromUrl(string $url, string $arg) : string
+	{
+		$res = preg_replace('/(.*)(?|&)' . $arg . '=[^&]+?(&)(.*)/i', '$1$2$4', $url . '&');
+		$res = substr($res, 0, -1);
+
+		return $res;
+	}
 
 
 	//------------------------------------------------------------------------------------------------------------------

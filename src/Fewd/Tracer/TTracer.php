@@ -34,10 +34,10 @@ class TTracer extends AModule
 	public final function IsDebug() : bool { return $this->_IsDebug; }
 
 	// Indicates if output is on a log file
-	private $_IsLog = false;
-	public final function IsLog() : bool  { return $this->_IsLog;  }
-	public       function LogOn()         { $this->_IsLog = true;  }
-	public       function LogOff()        { $this->_IsLog = false; }
+	private $_IsLogged = false;
+	public final function IsLogged() : bool  { return $this->_IsLogged;  }
+	public       function LogOn()            { $this->_IsLogged = true;  }
+	public       function LogOff()           { $this->_IsLogged = false; }
 
 
 	//------------------------------------------------------------------------------------------------------------------
@@ -61,12 +61,6 @@ class TTracer extends AModule
 		// Defines
 		$this->_Log        = $this->DefineLog();
 		$this->_LogDirname = $this->DefineLogDirname();
-
-		// Ensures that the log directory exists
-		if(!is_dir($this->LogDirname()))
-		{
-			mkdir($this->LogDirname(), 0700, true);
-		}
 
 		// New error and exception handlers
 		set_error_handler(    array($this, 'ErrorHandler'    ));
@@ -502,7 +496,7 @@ class TTracer extends AModule
 	// Outputs a value with a given design
 	//------------------------------------------------------------------------------------------------------------------
 	protected function TraceOutput(
-		       $value,
+		mixed  $value,
 		string $label      = '',
 		string $color      = '#333',
 		string $background = '#ccccccaa',
@@ -536,7 +530,7 @@ class TTracer extends AModule
 		$res.= '</pre>' . "\n";
 
 		// Shows banner as a log or on screen
-		if($this->IsLog())
+		if($this->IsLogged())
 		{
 			$this->Log()->Write($res);
 		}
@@ -550,7 +544,7 @@ class TTracer extends AModule
 	//------------------------------------------------------------------------------------------------------------------
 	// Traces a value
 	//------------------------------------------------------------------------------------------------------------------
-	public function Trace($value, string $label = '')
+	public function Trace(mixed $value, string $label = '')
 	{
 		$value = $this->TraceValue($value);
 
@@ -561,10 +555,12 @@ class TTracer extends AModule
 	//------------------------------------------------------------------------------------------------------------------
 	// Shows a blocking error message and stops here
 	//------------------------------------------------------------------------------------------------------------------
-	public function Stop(string $message)
+	public function Stop(mixed $message, string $label = '')
 	{
 		// Traces error
-		$this->TraceOutput($message, '', '#333', '#ff9999aa', 'red');
+		$message = $this->TraceValue($message);
+
+		$this->TraceOutput($message, $label, '#333', '#ff9999aa', 'red');
 
 		// Stops all
 		exit();
@@ -574,9 +570,11 @@ class TTracer extends AModule
 	//------------------------------------------------------------------------------------------------------------------
 	// Shows a warning message
 	//------------------------------------------------------------------------------------------------------------------
-	public function Warn(string $message)
+	public function Warn(mixed $message, string $label = '')
 	{
-		$this->TraceOutput($message, '', '#999', '#ffcc99aa', 'orange');
+		$message = $this->TraceValue($message);
+
+		$this->TraceOutput($message, $label, '#999', '#ffcc99aa', 'orange');
 	}
 
 

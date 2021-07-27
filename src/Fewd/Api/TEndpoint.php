@@ -22,33 +22,55 @@ class TEndpoint extends AThing
 	private $_Path;
 	public final function Path() : string { return $this->_Path; }
 
-	// Wildcards in path
-	private $_Wildcards;
-	public final function Wildcards()             : array { return $this->_Wildcards;             }
-	public       function HasWildcard(string $id) : bool  { return isset($this->_Wildcards[$id]); }
+	// Summary
+	private $_Summary;
+	public final function Summary() : string { return $this->_Summary; }
+
+	// Description
+	private $_Description;
+	public final function Description() : string { return $this->_Description; }
 
 	// Maximum limit (i.e. maximum records number that could be GET at once)
 	private $_MaximumLimit;
 	public final function MaximumLimit() : int { return $this->_MaximumLimit; }
 
+	// Gets the maximum age for a preflight run (see CORS standard)
+	private $_MaximumAge;
+	public final function MaximumAge() : int { return $this->_MaximumAge; }
+
+	// Wildcards in path
+	private $_Wildcards;
+	public final function Wildcards()             : array { return $this->_Wildcards;             }
+	public final function HasWildcard(string $id) : bool  { return isset($this->_Wildcards[$id]); }
+
 	// Operations associated to verbs
 	private $_Operations = array();
 	public final function Operations() : array                              { return $this->_Operations;               }
-	public       function Operation(   string $verb) : TOperation           { return $this->_Operations[$verb] ?? null;}
-	public       function HasOperation(string $verb) : bool                 { return isset($this->_Operations[$verb]); }
+	public final function Operation(   string $verb) : TOperation           { return $this->_Operations[$verb] ?? null;}
+	public final function HasOperation(string $verb) : bool                 { return isset($this->_Operations[$verb]); }
 	public       function AddOperation(string $verb, TOperation $operation) { $this->_Operations[$verb] = $operation;  }
 
 
 	//------------------------------------------------------------------------------------------------------------------
 	// Constructor
 	//------------------------------------------------------------------------------------------------------------------
-	public function __construct(TCore $core, TApi $api, string $path, int $maximumLimit)
+	public function __construct(
+		TCore  $core,
+		TApi   $api,
+		string $path,
+		string $summary,
+		string $description,
+		int    $maximumLimit,
+		int    $maximumAge)
 	{
 		parent::__construct($core);
 
 		$this->_Api          = $api;
 		$this->_Path         = $path;
+		$this->_Summary      = $summary;
+		$this->_Description  = $description;
 		$this->_MaximumLimit = $maximumLimit;
+		$this->_MaximumAge   = $maximumAge;
 	}
 
 
@@ -61,7 +83,10 @@ class TEndpoint extends AThing
 
 		$this->_Path         = $this->DefinePath();
 		$this->_Wildcards    = $this->DefineWildcards();
+		$this->_Summary      = $this->DefineSummary();
+		$this->_Description  = $this->DefineDescription();
 		$this->_MaximumLimit = $this->DefineMaximumLimit();
+		$this->_MaximumAge   = $this->DefineMaximumAge();
 	}
 
 
@@ -109,203 +134,80 @@ class TEndpoint extends AThing
 
 
 	//------------------------------------------------------------------------------------------------------------------
+	// Define : Summary
+	//------------------------------------------------------------------------------------------------------------------
+	protected function DefineSummary() : string
+	{
+		// If a summary was provided :
+		// Keeps it
+		if($this->Summary() !== '')
+		{
+			return $this->Summary();
+		}
+
+		// Summary contains path (without wildcards)
+		$res  = '';
+		$path = $this->Path();
+
+		foreach($this->Wildcards() as $k => $v)
+		{
+			$path = str_replace('{' . $k . '}', '', $path);
+		}
+
+		$parts = explode('/', $path);
+
+		$sep = '';
+		foreach($parts as $v)
+		{
+			if($v !== '')
+			{
+				if($sep === '')
+				{
+					$v = ucFirst($v);
+				}
+
+				$res.= $sep . $v;
+				$sep = ' ';
+			}
+		}
+
+		// Id ends with " by xxx and yyy" (where xxx and yyy are wildcards)
+		$sep = ' by ';
+		foreach($this->Wildcards() as $k => $v)
+		{
+			$res.= $sep . $k;
+			$sep = ' and ';
+		}
+
+		// Result
+		return $res;
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Define : Description
+	//------------------------------------------------------------------------------------------------------------------
+	protected function DefineDescription() : string
+	{
+		return $this->Description();
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
 	// Define : Maximum records number
 	//------------------------------------------------------------------------------------------------------------------
 	protected function DefineMaximumLimit() : int
 	{
-		$res = $this->MaximumLimit();
-
-		if($res < 1)
-		{
-			$res = $this->Api()->DefaultMaximumLimit();
-		}
-
-		return $res;
+		return max(100, $this->MaximumLimit());
 	}
 
 
 	//------------------------------------------------------------------------------------------------------------------
-	// Limits a given response to a given subset
+	// Define : Maximum age for a preflight run
 	//------------------------------------------------------------------------------------------------------------------
-	protected function LimitToSubset(array $response, string $subset) : array
+	protected function DefineMaximumAge() : int
 	{
-		// If response is null :
-		// Nothing to limit
-		if($response === null)
-		{
-			return null;
-		}
-
-		$res = $response;
-
-		// Splits subset into parts
-		$parts = explode('/', $subset);
-
-		// For each subset part :
-		foreach($parts as $v)
-		{
-			// Empty parts are ignored
-			if($v === '')
-			{
-				continue;
-			}
-
-			// If part is not found :
-			// Stops here
-			if(!isset($res[$v]))
-			{
-				return null;
-			}
-
-			// Otherwise :
-			// Fits result to the current part
-			$res = $res[$v];
-		}
-
-		// Result
-		return $res;
-	}
-
-
-	//------------------------------------------------------------------------------------------------------------------
-	// Limits a given response to a set of given fields
-	//------------------------------------------------------------------------------------------------------------------
-	protected function LimitToFields(array $response, string $fields) : array
-	{
-		// If response is null :
-		// Nothing to limit
-		if($response === null)
-		{
-			return null;
-		}
-
-		$res  = array();
-
-		// For each field in fields expression :
-		$data = explode(',', $fields);
-
-		foreach($data as $v)
-		{
-			// Empty fields are ignored
-			if($v === '')
-			{
-				continue;
-			}
-
-			// Keeps value for the current field
-			if(isset($response[$v]))
-			{
-				$res[$v] = $response[$v];
-			}
-		}
-
-		// Result
-		return $res;
-	}
-
-
-	//------------------------------------------------------------------------------------------------------------------
-	// Limits a given response to a set of given filters
-	//------------------------------------------------------------------------------------------------------------------
-	public function LimitToFilters(array $response, array $args) : array
-	{
-		// TODO
-		return $response;
-	}
-
-
-	//------------------------------------------------------------------------------------------------------------------
-	// Prepares a sort array from a given sort string (ex : 'description,name-,id+')
-	//------------------------------------------------------------------------------------------------------------------
-	protected function SortFields(string $sortString) : array
-	{
-		$res = array();
-
-		if($sortString !== '')
-		{
-			$parts = explode(',', $sortString);
-
-			foreach($parts as $v)
-			{
-				if($v === '')
-				{
-					continue;
-				}
-
-				$order = 'ASC';
-
-				if(substr($v, -1) === '-')
-				{
-					$v     = substr($v, 0, -1);
-					$order = 'DESC';
-				}
-				elseif(substr($v, -1) === '+')
-				{
-					$v     = substr($v, 0, -1);
-				}
-
-				$res[$v] = $order;
-			}
-		}
-
-		return $res;
-	}
-
-
-	//------------------------------------------------------------------------------------------------------------------
-	// Endpoint response
-	//------------------------------------------------------------------------------------------------------------------
-	public function Response(
-		string $verb,
-		array  $args,
-		array  $body,
-		string $subset,
-		string $fields,
-		string $sort,
-		int    $offset,
-		int    $limit) : array
-	{
-		// Prepares sorts
-		$sorts = $this->SortFields($sort);
-
-		// Gets response
-		$operation = $this->Operation($verb);
-
-		if($operation === null)
-		{
-			return array();
-		}
-
-		$res = call_user_func($operation->Callback(), $args, $body, $sorts, $offset, $limit);
-
-		// If response was not defined in callback :
-		// Returns an empty response
-		if($res === null)
-		{
-			return array();
-		}
-
-		// If verb is GET :
-		if($verb === 'GET')
-		{
-			// Limits response to a subset
-			if($subset !== '')
-			{
-				$res = $this->LimitToSubset($res, $subset);
-			}
-
-			// Limits response to a set of fields
-			if($fields !== '')
-			{
-				$res = $this->LimitToFields($res, $fields);
-			}
-
-			// Limits response to a set of filters
-			$res = $this->LimitToFilters($res, $args);
-		}
-
-		// Result
-		return $res;
+		return max(60, $this->MaximumAge());
 	}
 
 
@@ -325,14 +227,5 @@ class TEndpoint extends AThing
 		$res = implode(', ', $verbs);
 
 		return $res;
-	}
-
-
-	//------------------------------------------------------------------------------------------------------------------
-	// Gets the maximum age for a preflight run (see CORS standard)
-	//------------------------------------------------------------------------------------------------------------------
-	public function MaximumAge() : int
-	{
-		return 3600;
 	}
 }
