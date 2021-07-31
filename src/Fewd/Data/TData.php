@@ -18,8 +18,7 @@ class TData extends AModule
 	// Error constants
 	public const ERROR_CONNECT       = 'Unable to connect to "{{NAME}}" database.';
 	public const ERROR_NOT_CONNECTED = 'Not connected to database "{{NAME}}".';
-	public const ERROR_QUERY_TYPE    = 'Unknown query type.';
-	public const ERROR_QUERY         = 'Error [{{CODE}}] : {{MESSAGE}}.';
+	public const ERROR_QUERY         = 'Error [{{CODE}}] : {{MESSAGE}}';
 
 	// Query types constants
 	public const QUERY_SELECT        = 'SELECT';
@@ -31,6 +30,7 @@ class TData extends AModule
 	public const QUERY_TRUNCATE      = 'TRUNCATE';
 
 	// Datatype constants
+	public const DATATYPE_ID         = 'ID';
 	public const DATATYPE_CODE       = 'CODE';
 	public const DATATYPE_FLAG       = 'FLAG';
 	public const DATATYPE_KIND       = 'KIND';
@@ -81,7 +81,8 @@ class TData extends AModule
 	//------------------------------------------------------------------------------------------------------------------
 	public function IsDatatype(string $datatype) : bool
 	{
-		return (($datatype === self::DATATYPE_CODE       ) ||
+		return (($datatype === self::DATATYPE_ID         ) ||
+		        ($datatype === self::DATATYPE_CODE       ) ||
 		        ($datatype === self::DATATYPE_FLAG       ) ||
 		        ($datatype === self::DATATYPE_KIND       ) ||
 		        ($datatype === self::DATATYPE_NUMBER     ) ||

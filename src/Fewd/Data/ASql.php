@@ -150,21 +150,28 @@ abstract class ASql extends AThing
 	//------------------------------------------------------------------------------------------------------------------
 	public function DirectQuery(string $indent = '') : string
 	{
+		$labels   = array();
+		$values   = array();
 		$bindings = array();
 
+		// Gets PDO query
 		$res = $this->Query($bindings, $indent);
 
-		$labels = array();
-		$values = array();
+		// Reverses the bindings array
+		// (to avoid having ":value_10" replaced by ":value_1")
+		$bindings = array_reverse($bindings);
 
+		// Prepares the replacements
 		foreach($bindings as $k => $v)
 		{
 			$labels[] = ':' . $k;
 			$values[] = $this->Database()->StringQuote($v);
 		}
 
+		// Applies the replacements
 		$res = str_replace($labels, $values, $res);
 
+		// Result
 		return $res;
 	}
 

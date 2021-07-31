@@ -91,11 +91,20 @@ class TInsert extends ASql
 		{
 			$this->Nop($v);
 
+			// If field is an auto-increment :
+			// It cannot be inserted manually
+			if($this->Datatable()->IsAutoIncrement($k))
+			{
+				continue;
+			}
+
+			// Adds the current field
 			$query.= $sep. $this->Database()->Quote($k);
 
 			$sep = ',' . $this->Ret() . $indent . $this->Tab();
 		}
 
+		// Adds the VALUES statement
 		$query.= $this->Ret() . $indent . ') VALUES';
 	}
 
@@ -117,6 +126,13 @@ class TInsert extends ASql
 
 		foreach($fields as $k => $v)
 		{
+			// If field is an auto-increment :
+			// It cannot be inserted manually
+			if($this->Datatable()->IsAutoIncrement($k))
+			{
+				continue;
+			}
+
 			// If value was not provided for current field :
 			// Uses a default value
 			if(isset($values[$k]))

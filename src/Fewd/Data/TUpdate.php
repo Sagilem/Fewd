@@ -84,6 +84,12 @@ class TUpdate extends AConditionSql
 			$values[$data->FieldUpdatedWhen()] = $this->Database()->When();
 		}
 
+		// Keys cannot be updated
+		foreach($this->Datatable()->Keys() as $k => $v)
+		{
+			unset($values[$k]);
+		}
+
 		// Adds UPDATE statement
 		$query.= $indent . 'UPDATE ' . $this->Database()->Quote($this->Datatable()->Name()) . ' SET';
 

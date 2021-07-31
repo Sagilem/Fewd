@@ -45,6 +45,15 @@ class TDatabaseSqlite extends ADatabase
 
 
 	//------------------------------------------------------------------------------------------------------------------
+	// Auto-increment statement
+	//------------------------------------------------------------------------------------------------------------------
+	public function AutoIncrementStatement() : string
+	{
+		return 'AUTOINCREMENT';
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
 	// Datatype statement
 	//------------------------------------------------------------------------------------------------------------------
 	public function DatatypeStatement(string $datatype) : string
@@ -53,6 +62,7 @@ class TDatabaseSqlite extends ADatabase
 
 		switch($datatype)
 		{
+			case TData::DATATYPE_ID         : return 'INT';
 			case TData::DATATYPE_NUMBER     : return 'INTEGER';
 			case TData::DATATYPE_FLOAT      : return 'REAL';
 		}
