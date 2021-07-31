@@ -113,8 +113,20 @@ abstract class AModel extends AThing
 
 			if($datatable !== null)
 			{
+				// Adds creation query
 				$res.= $sep . $datatable->CreateQuery() . ';';
 				$sep = "\n\n";
+
+				// Adds insertion queries for default records
+				$insert = $this->Data()->MakeInsert($datatable);
+
+				foreach($datatable->DefaultRecords() as $vv)
+				{
+					$insert->Clear();
+					$insert->AddRecord($vv);
+
+					$res.= $sep . $insert->DirectQuery() . ';';
+				}
 			}
 		}
 
