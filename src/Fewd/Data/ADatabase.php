@@ -88,6 +88,10 @@ abstract class ADatabase extends AThing
 	private $_LastResults;
 	public final function LastResults() : array { return $this->_LastResults; }
 
+	// Last inserted id
+	private $_LastInsertId;
+	public final function LastInsertId() : string { return $this->_LastInsertId; }
+
 	// Number of affected rows during last executed query
 	private $_LastCount;
 	public final function LastCount() : int { return $this->_LastCount; }
@@ -253,6 +257,7 @@ abstract class ADatabase extends AThing
 		$this->_LastQueryType    = '';
 		$this->_LastBindings     = array();
 		$this->_LastResults      = array();
+		$this->_LastInsertId     = '';
 		$this->_LastCount        = 0;
 		$this->_LastErrorCode    = '';
 		$this->_LastErrorMessage = '';
@@ -427,6 +432,15 @@ abstract class ADatabase extends AThing
 
 
 	//------------------------------------------------------------------------------------------------------------------
+	// Auto-increment statement
+	//------------------------------------------------------------------------------------------------------------------
+	public function AutoIncrementStatement() : string
+	{
+		return 'AUTO_INCREMENT';
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
 	// Datatype statement
 	//------------------------------------------------------------------------------------------------------------------
 	public function DatatypeStatement(string $datatype) : string
@@ -435,9 +449,10 @@ abstract class ADatabase extends AThing
 
 		switch($datatype)
 		{
+			case TData::DATATYPE_ID         : return 'INT';
 			case TData::DATATYPE_CODE       : return 'VARCHAR(50)';
 			case TData::DATATYPE_FLAG       : return 'CHAR(1)';
-			case TData::DATATYPE_KIND       : return 'CHAR(2)';
+			case TData::DATATYPE_KIND       : return 'CHAR(4)';
 			case TData::DATATYPE_NUMBER     : return 'BIGINT';
 			case TData::DATATYPE_FLOAT      : return 'DOUBLE';
 			case TData::DATATYPE_TEXT       : return 'VARCHAR(255)';
@@ -555,6 +570,12 @@ abstract class ADatabase extends AThing
 		foreach($fields as $k => $v)
 		{
 			$res.= $sep . "\n\t" . $this->Quote($k) . ' ' . $this->DatatypeStatement($v) . ' NOT NULL';
+
+			if(($v === TData::DATATYPE_ID) && isset($keys[$k]) && (count($keys) === 1))
+			{
+				$res.= ' ' . $this->AutoIncrementStatement();
+			}
+
 			$sep = ',';
 		}
 
@@ -969,6 +990,14 @@ abstract class ADatabase extends AThing
 			}
 		}
 
+		// If query is an INSERT :
+		// Gets the last inserted id
+		$id = $this->Handle()->LastInsertId;
+		if($id !== false)
+		{
+			$this->_LastInsertId = $id;
+		}
+
 		// If query came to an error :
 		// Stops here
 		if($number === false)
@@ -1008,12 +1037,6 @@ abstract class ADatabase extends AThing
 		if(!$this->IsConnected())
 		{
 			return $this->BuildError('NOT_CONNECTED', TData::ERROR_NOT_CONNECTED);
-		}
-
-		// Gets query type
-		if($this->LastQueryType() === '')
-		{
-			return $this->BuildError('QUERY_TYPE', TData::ERROR_QUERY_TYPE);
 		}
 
 		// Prepares query

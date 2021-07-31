@@ -45,14 +45,14 @@ class TDataTest extends ATest
 
 		// Datatable creation with specific instructions + fulltexts
 		$datatable = $data->MakeDatatable($database, 'test');
-		$datatable->AddKey(     'id'  , TData::DATATYPE_CODE    );
+		$datatable->AddKey(     'id'  , TData::DATATYPE_ID      );
 		$datatable->AddField(   'name', TData::DATATYPE_TEXT    );
 		$datatable->AddField(   'when', TData::DATATYPE_DATETIME);
 		$datatable->AddFulltext('name');
 
 		$this->Check($datatable->CreateQuery(),
 			"CREATE TABLE IF NOT EXISTS `test` (\n" .
-			"\t`id` VARCHAR(50) NOT NULL,\n" .
+			"\t`id` INT NOT NULL AUTO_INCREMENT,\n" .
 			"\t`name` VARCHAR(255) NOT NULL,\n" .
 			"\t`when` CHAR(14) NOT NULL,\n" .
 			"FULLTEXT `test__fulltext__name` (`name`),\n" .
@@ -67,13 +67,13 @@ class TDataTest extends ATest
 
 		// Datatable creation in one instruction
 		$datatable = $data->MakeDatatable($database, 'test', array(
-			'id*' => TData::DATATYPE_CODE,
+			'id*' => TData::DATATYPE_ID,
 			'name' => TData::DATATYPE_TEXT,
 			'when' => TData::DATATYPE_DATETIME));
 
 		$this->Check($datatable->CreateQuery(),
 			"CREATE TABLE IF NOT EXISTS `test` (\n" .
-			"\t`id` VARCHAR(50) NOT NULL,\n" .
+			"\t`id` INT NOT NULL AUTO_INCREMENT,\n" .
 			"\t`name` VARCHAR(255) NOT NULL,\n" .
 			"\t`when` CHAR(14) NOT NULL,\n" .
 			"PRIMARY KEY (\n" .
@@ -92,7 +92,7 @@ class TDataTest extends ATest
 
 		$this->Check($datatable->CreateQuery(),
 			"CREATE TABLE IF NOT EXISTS `test` (\n" .
-			"\t`id` VARCHAR(50) NOT NULL,\n" .
+			"\t`id` INT NOT NULL AUTO_INCREMENT,\n" .
 			"\t`name` VARCHAR(255) NOT NULL,\n" .
 			"\t`when` CHAR(14) NOT NULL,\n" .
 			"\t`sort` CHAR(22) NOT NULL,\n" .
@@ -108,7 +108,7 @@ class TDataTest extends ATest
 
 		$this->Check($datatable->CreateQuery(),
 			"CREATE TABLE IF NOT EXISTS `test` (\n" .
-			"\t`id` VARCHAR(50) NOT NULL,\n" .
+			"\t`id` INT NOT NULL AUTO_INCREMENT,\n" .
 			"\t`name` VARCHAR(255) NOT NULL,\n" .
 			"\t`when` CHAR(14) NOT NULL,\n" .
 			"\t`created_by` VARCHAR(50) NOT NULL,\n" .
@@ -130,9 +130,9 @@ class TDataTest extends ATest
 		$data = $database->Data();
 
 		$datatable = $data->MakeDatatable($database, 'test', array(
-			'id*'     => TData::DATATYPE_CODE,
+			'id*'     => TData::DATATYPE_ID,
 			'name'    => TData::DATATYPE_TEXT,
-			'type'    => TData::DATATYPE_TEXT,
+			'type'    => TData::DATATYPE_CODE,
 			'counter' => TData::DATATYPE_NUMBER,
 			'when'    => TData::DATATYPE_DATETIME));
 
@@ -256,7 +256,7 @@ class TDataTest extends ATest
 		$data = $database->Data();
 
 		$datatableElements = $data->MakeDatatable($database, 'elements', array(
-			'element*' => TData::DATATYPE_CODE,
+			'element*' => TData::DATATYPE_ID,
 			'name'     => TData::DATATYPE_TEXT,
 			'family1'  => TData::DATATYPE_CODE,
 			'family2'  => TData::DATATYPE_CODE));
@@ -319,7 +319,7 @@ class TDataTest extends ATest
 		$data = $database->Data();
 
 		$datatable = $data->MakeDatatable($database, 'test', array(
-			'id*'     => TData::DATATYPE_CODE,
+			'id*'     => TData::DATATYPE_ID,
 			'name'    => TData::DATATYPE_TEXT,
 			'type'    => TData::DATATYPE_TEXT,
 			'counter' => TData::DATATYPE_NUMBER,
@@ -329,9 +329,9 @@ class TDataTest extends ATest
 		$insert = $data->MakeInsert($datatable);
 
 		$insert->AddRecord(array(
-			'id'      => '1234',
 			'name'    => 'my name',
 			'type'    => 'my \'type\'',
+			'anyhing' => 'to be ignored',
 			'counter' => 3,
 			'when'    => '20200101000000'));
 
@@ -340,7 +340,6 @@ class TDataTest extends ATest
 		$this->Check($insert->Query($bindings),
 			"INSERT INTO `test`\n" .
 			"(\n" .
-			"\t`id`,\n" .
 			"\t`name`,\n" .
 			"\t`type`,\n" .
 			"\t`counter`,\n" .
@@ -350,8 +349,7 @@ class TDataTest extends ATest
 			"\t:value_1,\n" .
 			"\t:value_2,\n" .
 			"\t:value_3,\n" .
-			"\t:value_4,\n" .
-			"\t:value_5\n" .
+			"\t:value_4\n" .
 			")");
 
 		// INSERT on a sorted datatable
@@ -362,7 +360,6 @@ class TDataTest extends ATest
 		$this->Check($insert->Query($bindings),
 			"INSERT INTO `test`\n" .
 			"(\n" .
-			"\t`id`,\n" .
 			"\t`name`,\n" .
 			"\t`type`,\n" .
 			"\t`counter`,\n" .
@@ -374,11 +371,10 @@ class TDataTest extends ATest
 			"\t:value_2,\n" .
 			"\t:value_3,\n" .
 			"\t:value_4,\n" .
-			"\t:value_5,\n" .
-			"\t:value_6\n" .
+			"\t:value_5\n" .
 			")");
 
-		$this->CheckArrayValue($bindings, 'value_6', $microtime);
+		$this->CheckArrayValue($bindings, 'value_5', $microtime);
 
 		$datatable->SortOff();
 
@@ -391,7 +387,6 @@ class TDataTest extends ATest
 		$this->Check($insert->Query($bindings),
 			"INSERT INTO `test`\n" .
 			"(\n" .
-			"\t`id`,\n" .
 			"\t`name`,\n" .
 			"\t`type`,\n" .
 			"\t`counter`,\n" .
@@ -409,14 +404,13 @@ class TDataTest extends ATest
 			"\t:value_5,\n" .
 			"\t:value_6,\n" .
 			"\t:value_7,\n" .
-			"\t:value_8,\n" .
-			"\t:value_9\n" .
+			"\t:value_8\n" .
 			")");
 
-		$this->CheckArrayValue($bindings, 'value_6', $by);
-		$this->CheckArrayValue($bindings, 'value_7', $when);
-		$this->CheckArrayValue($bindings, 'value_8', $by);
-		$this->CheckArrayValue($bindings, 'value_9', $when);
+		$this->CheckArrayValue($bindings, 'value_5', $by);
+		$this->CheckArrayValue($bindings, 'value_6', $when);
+		$this->CheckArrayValue($bindings, 'value_7', $by);
+		$this->CheckArrayValue($bindings, 'value_8', $when);
 
 		$datatable->ManagementOff();
 	}
@@ -430,7 +424,7 @@ class TDataTest extends ATest
 		$data = $database->Data();
 
 		$datatable = $data->MakeDatatable($database, 'test', array(
-			'id*'     => TData::DATATYPE_CODE,
+			'id*'     => TData::DATATYPE_ID,
 			'name'    => TData::DATATYPE_TEXT,
 			'type'    => TData::DATATYPE_TEXT,
 			'counter' => TData::DATATYPE_NUMBER,
@@ -444,7 +438,7 @@ class TDataTest extends ATest
 				'counter'     => 4,
 				'wrong_field' => 'wrong_value'),
 			array(
-				'id'          => '1234'));
+				'id'          => 1234));
 
 		$bindings = array();
 		$this->Check($update->Query($bindings),
@@ -489,7 +483,7 @@ class TDataTest extends ATest
 		$data = $database->Data();
 
 		$datatable = $data->MakeDatatable($database, 'test', array(
-			'id*'     => TData::DATATYPE_CODE,
+			'id*'     => TData::DATATYPE_ID,
 			'name'    => TData::DATATYPE_TEXT,
 			'type'    => TData::DATATYPE_TEXT,
 			'counter' => TData::DATATYPE_NUMBER,

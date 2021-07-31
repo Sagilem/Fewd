@@ -199,6 +199,28 @@ class TDatatable extends AThing
 
 
 	//------------------------------------------------------------------------------------------------------------------
+	// Indicates if a given field is an auto-increment key
+	//------------------------------------------------------------------------------------------------------------------
+	public function IsAutoIncrement(string $field) : bool
+	{
+		// Field must be a key
+		if(!$this->HasKey($field))
+		{
+			return false;
+		}
+
+		// Field must be a code
+		if($this->Field($field) !== TData::DATATYPE_ID)
+		{
+			return false;
+		}
+
+		// Field must be the only key
+		return (count($this->Keys()) === 1);
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
 	// Gets the complete array of fields (including special fields like SORT, CREATED BY, ...)
 	//------------------------------------------------------------------------------------------------------------------
 	public function AllFields() : array
