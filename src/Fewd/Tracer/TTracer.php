@@ -574,7 +574,7 @@ class TTracer extends AModule
 	{
 		$message = $this->TraceValue($message);
 
-		$this->TraceOutput($message, $label, '#999', '#ffcc99aa', 'orange');
+		$this->TraceOutput($message, $label, '#333', '#ffffaaaa', 'yellow');
 	}
 
 
