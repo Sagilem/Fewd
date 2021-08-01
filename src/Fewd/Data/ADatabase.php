@@ -992,7 +992,7 @@ abstract class ADatabase extends AThing
 
 		// If query is an INSERT :
 		// Gets the last inserted id
-		$id = $this->Handle()->LastInsertId;
+		$id = $this->Handle()->lastInsertId();
 		if($id !== false)
 		{
 			$this->_LastInsertId = $id;
