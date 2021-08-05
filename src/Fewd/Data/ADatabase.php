@@ -338,8 +338,6 @@ abstract class ADatabase extends AThing
 	//------------------------------------------------------------------------------------------------------------------
 	public function Begin()
 	{
-		$this->Connect();
-
 		if($this->IsConnected())
 		{
 			$this->_IsTransaction = true;
@@ -353,8 +351,6 @@ abstract class ADatabase extends AThing
 	//------------------------------------------------------------------------------------------------------------------
 	public function Commit()
 	{
-		$this->Connect();
-
 		if($this->IsConnected())
 		{
 			$this->_IsTransaction = false;
@@ -368,8 +364,6 @@ abstract class ADatabase extends AThing
 	//------------------------------------------------------------------------------------------------------------------
 	public function Rollback()
 	{
-		$this->Connect();
-
 		if($this->IsConnected())
 		{
 			$this->_IsTransaction = false;
@@ -1024,12 +1018,6 @@ abstract class ADatabase extends AThing
 		array|string $indexes  = '',
 		bool         $isHuge   = false) : string
 	{
-		// Clears last query
-		$this->Clear();
-		$this->_LastQuery     = $query;
-		$this->_LastQueryType = $this->QueryType($query);
-		$this->_LastBindings  = $bindings;
-
 		// If database is not connected :
 		// Error
 		$this->Connect();
@@ -1038,6 +1026,12 @@ abstract class ADatabase extends AThing
 		{
 			return $this->BuildError('NOT_CONNECTED', TData::ERROR_NOT_CONNECTED);
 		}
+
+		// Clears last query
+		$this->Clear();
+		$this->_LastQuery     = $query;
+		$this->_LastQueryType = $this->QueryType($query);
+		$this->_LastBindings  = $bindings;
 
 		// Prepares query
 		if(empty($bindings))
