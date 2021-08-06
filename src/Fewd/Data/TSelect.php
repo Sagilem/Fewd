@@ -62,7 +62,7 @@ class TSelect extends AConditionSql
 	public final function Indexes()               : array        { return $this->_Indexes;              }
 	public final function Index(      string $id) : string       { return $this->_Indexes[$id] ?? null; }
 	public final function HasIndex(   string $id) : bool         { return isset($this->_Indexes[$id]);  }
-	public       function AddIndex(   string $id, string $value) { $this->_Indexes[$id] = $value;       }
+	public       function AddIndex(   string $id)                { $this->_Indexes[$id] = $id;          }
 	public       function RemoveIndex(string $id)                { unset($this->_Indexes[$id]);         }
 	public       function ClearIndexes()                         { $this->_Indexes = array();           }
 
@@ -668,6 +668,33 @@ class TSelect extends AConditionSql
 	//------------------------------------------------------------------------------------------------------------------
 	protected function RawRun(string $query, array $bindings) : string
 	{
-		return $this->Database()->Run($query, $bindings, $this->Indexes(), $this->IsHuge());
+		// If index fields are renamed in the query output through "Fields" collection :
+		// The new name must be used instead
+		$indexes = $this->Indexes();
+
+		foreach($this->Fields() as $k => $v)
+		{
+			if(isset($indexes[$v]))
+			{
+				// A renamed field has not the shape 'key:', 'key&', 'key@'
+				$suffix = substr($k, -1);
+
+				if(($suffix !== ':') && ($suffix !== '&') && ($suffix !== '@'))
+				{
+					$indexes[$v] = $k;
+				}
+			}
+		}
+
+		// Transformation is processed in two steps, because the indexes order must be maintained
+		$renamedIndexes = array();
+
+		foreach($indexes as $v)
+		{
+			$renamedIndexes[$v] = $v;
+		}
+
+		// Results
+		return $this->Database()->Run($query, $bindings, $renamedIndexes, $this->IsHuge());
 	}
 }
