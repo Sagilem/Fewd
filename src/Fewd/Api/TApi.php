@@ -1395,10 +1395,14 @@ class TApi extends AModule
 			$maximumAge = $endpoint->MaximumAge();
 		}
 
+		if($maximumAge > 0)
+		{
+			header('Access-Control-Max-Age: ' . $maximumAge);
+		}
+
 		// Outputs headers
 		header('Access-Control-Allow-Origin: *');
 		header('Access-Control-Allow-Methods: ' . $allowedVerbs);
-		header('Access-Control-Max-Age: '       . $maximumAge  );
 		header('Access-Control-Allow-Headers: Origin, Content-Type, Accept, Authorization, X-Requested-With');
 
 		header('Content-Type: application/json; charset=UTF-8');
@@ -1605,7 +1609,7 @@ class TApi extends AModule
 			$count    = $response[$this->CountLabel()];
 			$response = $response[$this->Datalabel() ];
 
-			if(($offset !== 0) || ($count > $limit))
+			if(($limit > 0) && (($offset !== 0) || ($count > $limit)))
 			{
 				$this->Exit206($response, $offset, $limit, $count, $endpoint);
 			}
@@ -1616,7 +1620,7 @@ class TApi extends AModule
 		// Outputs a partial response if it is not complete
 		elseif($this->IsCollectionResponse($response))
 		{
-			if(($offset !== 0) || count($response) >= $limit)
+			if(($limit > 0) && (($offset !== 0) || count($response) > $limit))
 			{
 				$this->Exit206($response, $offset, $limit, -1, $endpoint);
 			}
@@ -1717,9 +1721,9 @@ class TApi extends AModule
 		$offset = max($this->IntArgValue(   $this->OffsetArg(), $args), 0);
 		$limit  = min($this->IntArgValue(   $this->LimitArg() , $args), $endpoint->MaximumLimit());
 
-		if($limit <= 0)
+		if($limit < 0)
 		{
-			$limit = 1;
+			$limit = 0;
 		}
 
 		// If a subset was provided for a verb other than GET :
