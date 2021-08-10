@@ -125,10 +125,12 @@ class TSelect extends AConditionSql
 	//------------------------------------------------------------------------------------------------------------------
 	public function Init()
 	{
-		$fields  = $this->Fields();
-		$groups  = $this->Groups();
-		$havings = $this->Havings();
-		$sorts   = $this->Sorts();
+		$fields     = $this->Fields();
+		$groups     = $this->Groups();
+		$havings    = $this->Havings();
+		$sorts      = $this->Sorts();
+		$pageStart  = $this->PageStart();
+		$pageLength = $this->PageLength();
 
 		parent::Init();
 
@@ -139,8 +141,8 @@ class TSelect extends AConditionSql
 		$this->InitJoins();
 		$this->InitIndexes();
 
-		$this->SetPageStart( $this->PageStart() );
-		$this->SetPageLength($this->PageLength());
+		$this->SetPageStart( $pageStart );
+		$this->SetPageLength($pageLength);
 	}
 
 
@@ -696,5 +698,68 @@ class TSelect extends AConditionSql
 
 		// Results
 		return $this->Database()->Run($query, $bindings, $renamedIndexes, $this->IsHuge());
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Runs a COUNT query based on current SELECT
+	//------------------------------------------------------------------------------------------------------------------
+	public function Count() : int
+	{
+		// Stores fields
+		$fields = $this->Fields();
+
+		// Sets fields to a single COUNT field
+		$this->ClearFields();
+		$this->AddField('count@', 'COUNT(*)');
+
+		// Runs query
+		$res = $this->Run();
+
+		// If query succeeded :
+		// Gets count
+		$count = 0;
+
+		if(is_array($res))
+		{
+			foreach($res as $v)
+			{
+				$count = $v['count'];
+				break;
+			}
+		}
+
+		// Restores fields
+		$this->ClearFields();
+		foreach($fields as $k => $v)
+		{
+			$this->AddField($k, $v);
+		}
+
+		// Result
+		return $count;
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Runs a TOTAL COUNT query based on current SELECT
+	//------------------------------------------------------------------------------------------------------------------
+	public function TotalCount() : int
+	{
+		// Stores page
+		$pageStart  = $this->PageStart();
+		$pageLength = $this->PageLength();
+
+		// Counts without any page
+		$this->ClearPage();
+
+		$count = $this->Count();
+
+		// Restores page
+		$this->SetPageStart( $pageStart );
+		$this->SetPageLength($pageLength);
+
+		// Result
+		return $count;
 	}
 }

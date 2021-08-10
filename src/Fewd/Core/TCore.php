@@ -1207,7 +1207,7 @@ class TCore extends AModule
 	//------------------------------------------------------------------------------------------------------------------
 	public function RemoveArgumentFromUrl(string $url, string $arg) : string
 	{
-		$res = preg_replace('/(.*)(?|&)' . $arg . '=[^&]+?(&)(.*)/i', '$1$2$4', $url . '&');
+		$res = preg_replace('/(.*)([?]|&)' . $arg . '=[^&]+?(&)(.*)/i', '$1$2$4', $url . '&');
 		$res = substr($res, 0, -1);
 
 		return $res;

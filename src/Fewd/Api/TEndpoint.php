@@ -198,7 +198,12 @@ class TEndpoint extends AThing
 	//------------------------------------------------------------------------------------------------------------------
 	protected function DefineMaximumLimit() : int
 	{
-		return min(100, $this->MaximumLimit());
+		if($this->MaximumLimit() <= 0)
+		{
+			return 0;
+		}
+
+		return $this->MaximumLimit();
 	}
 
 
@@ -207,7 +212,12 @@ class TEndpoint extends AThing
 	//------------------------------------------------------------------------------------------------------------------
 	protected function DefineMaximumAge() : int
 	{
-		return min(60, $this->MaximumAge());
+		if ($this->MaximumAge() <= 0)
+		{
+			return 60;
+		}
+
+		return $this->MaximumAge();
 	}
 
 
