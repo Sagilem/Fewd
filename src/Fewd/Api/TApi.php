@@ -119,10 +119,10 @@ class TApi extends AModule
 	// Other resources to transfer to endpoint resolution (such as database, etc.)
 	// Resources
 	private $_Resources;
-	public final function Resources()             : array        { return $this->_Resources;              }
-	public final function Resource(   string $id) : object       { return $this->_Resources[$id] ?? null; }
-	public final function HasResource(string $id) : bool         { return isset($this->_Resources[$id]);  }
-	public       function AddResource(string $id, object $value) { $this->_Resources[$id] = $value;       }
+	public final function Resources()             : array       { return $this->_Resources;              }
+	public final function Resource(   string $id) : mixed       { return $this->_Resources[$id] ?? null; }
+	public final function HasResource(string $id) : bool        { return isset($this->_Resources[$id]);  }
+	public       function AddResource(string $id, mixed $value) { $this->_Resources[$id] = $value;       }
 
 	// Last error code encountered in an Api call
 	protected $_LastErrorCode;
@@ -1551,16 +1551,18 @@ class TApi extends AModule
 			$links.= '&' . $this->LimitArg() . '=' . $limit . '>; rel="first",';
 
 			// Link to previous page
-			$previous = max($offset - $limit, 0);
-
-			$links.= '<' . $url . $this->OffsetArg() . '=' . $previous;
-			$links.= '&' . $this->LimitArg() . '=' . $limit . '>; rel="prev",';
+			if($offset >= $limit)
+			{
+				$links.= '<' . $url . $this->OffsetArg() . '=' . ($offset - $limit);
+				$links.= '&' . $this->LimitArg() . '=' . $limit . '>; rel="prev",';
+			}
 
 			// Link to next page
-			$next = min($offset + $limit, $count);
-
-			$links.= '<' . $url . $this->OffsetArg() . '=' . $next;
-			$links.= '&' . $this->LimitArg() . '=' . $limit . '>; rel="next",';
+			if($offset + $limit < $count)
+			{
+				$links.= '<' . $url . $this->OffsetArg() . '=' . ($offset + $limit);
+				$links.= '&' . $this->LimitArg() . '=' . $limit . '>; rel="next",';
+			}
 
 			// Link to last page
 			$last = $limit * floor(max(0, ($count - 1)) / $limit);
@@ -1714,12 +1716,24 @@ class TApi extends AModule
 
 		$operation = $endpoint->Operation($verb);
 
+		// If an offset was provided, but no limit :
+		// Limit is automatically set to 1
+		if(isset($args[$this->OffsetArg()]) && !isset($args[$this->LimitArg()]))
+		{
+			$args[$this->LimitArg()] = 1;
+		}
+
 		// Gets special arguments
 		$subset =     $this->StringArgValue($this->SubsetArg(), $args);
 		$fields =     $this->StringArgValue($this->FieldsArg(), $args);
 		$sort   =     $this->StringArgValue($this->SortArg()  , $args);
 		$offset = max($this->IntArgValue(   $this->OffsetArg(), $args), 0);
-		$limit  = min($this->IntArgValue(   $this->LimitArg() , $args), $endpoint->MaximumLimit());
+		$limit  =     $this->IntArgValue(   $this->LimitArg() , $args);
+
+		if(($endpoint->MaximumLimit() > 0) && ($limit > $endpoint->MaximumLimit()))
+		{
+			$limit = $endpoint->MaximumLimit();
+		}
 
 		if($limit < 0)
 		{

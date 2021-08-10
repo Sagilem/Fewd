@@ -463,7 +463,7 @@ abstract class ADatabase extends AThing
 	//------------------------------------------------------------------------------------------------------------------
 	// TOP statement in a PDO SELECT query (intended for MS-SQL)
 	//------------------------------------------------------------------------------------------------------------------
-	public function TopStatement(int $start, int $length) : string
+	public function TopStatement(string $start, string $length) : string
 	{
 		$this->Nop($start );
 		$this->Nop($length);
@@ -512,7 +512,7 @@ abstract class ADatabase extends AThing
 	//------------------------------------------------------------------------------------------------------------------
 	// LIMIT statement in a PDO SELECT query
 	//------------------------------------------------------------------------------------------------------------------
-	public function LimitStatement(int $start, int $length) : string
+	public function LimitStatement(string $start, string $length) : string
 	{
 		return 'LIMIT ' . $start . ', ' . $length;
 	}
