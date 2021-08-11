@@ -1551,10 +1551,13 @@ class TApi extends AModule
 			$links.= '&' . $this->LimitArg() . '=' . $limit . '>; rel="first",';
 
 			// Link to previous page
-			if($offset >= $limit)
+			$previous       = max(0, $offset - $limit);
+			$previousLength = min($offset, $limit);
+
+			if($offset > 0)
 			{
-				$links.= '<' . $url . $this->OffsetArg() . '=' . ($offset - $limit);
-				$links.= '&' . $this->LimitArg() . '=' . $limit . '>; rel="prev",';
+				$links.= '<' . $url . $this->OffsetArg() . '=' . $previous;
+				$links.= '&' . $this->LimitArg() . '=' . $previousLength . '>; rel="prev",';
 			}
 
 			// Link to next page
