@@ -446,11 +446,11 @@ class TOperation extends AThing
 
 		// For each record in response :
 		// Checks if it matches to filters
-		foreach($response as $v)
+		foreach($response as $k => $v)
 		{
 			if(!is_array($v) || $this->CheckFilters($v, $filters))
 			{
-				$res[] = $v;
+				$res[$k] = $v;
 			}
 		}
 
