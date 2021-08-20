@@ -54,11 +54,6 @@ class TJoin extends AThing
 	public final function Jointype() : string        { return $this->_Jointype;                            }
 	public       function SetJointype(string $value) { $this->_Jointype = $this->Data()->Jointype($value); }
 
-	// Alias
-	private $_Alias;
-	public final function Alias() : string        { return $this->_Alias;   }
-	public       function SetAlias(string $value) { $this->_Alias = $value; }
-
 
 	//------------------------------------------------------------------------------------------------------------------
 	// Constructor
@@ -70,8 +65,7 @@ class TJoin extends AThing
 		array              $links,
 		array              $fields,
 		array              $conditions,
-		string             $jointype,
-		string             $alias)
+		string             $jointype)
 	{
 		parent::__construct($core);
 
@@ -81,7 +75,6 @@ class TJoin extends AThing
 		$this->_Fields     = $fields;
 		$this->_Conditions = $conditions;
 		$this->_Jointype   = $jointype;
-		$this->_Alias      = $alias;
 	}
 
 
@@ -113,7 +106,6 @@ class TJoin extends AThing
 			$this->AddCondition($k, $v);
 		}
 
-		$this->SetAlias(   $this->Alias()   );
 		$this->SetJointype($this->Jointype());
 	}
 

@@ -96,7 +96,7 @@ class TUpdate extends AConditionSql
 		// For each datatable field :
 		$sep = $this->Ret() . $indent . $this->Tab();
 
-		$fields = $this->Datatable()->AllFields();
+		$fields = $this->Datatable()->RealFields();
 
 		foreach($fields as $k => $v)
 		{

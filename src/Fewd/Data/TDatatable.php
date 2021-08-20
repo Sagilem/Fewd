@@ -223,7 +223,7 @@ class TDatatable extends AThing
 	//------------------------------------------------------------------------------------------------------------------
 	// Gets the complete array of fields (including special fields like SORT, CREATED BY, ...)
 	//------------------------------------------------------------------------------------------------------------------
-	public function AllFields() : array
+	public function RealFields() : array
 	{
 		$data = $this->Data();
 
@@ -247,6 +247,38 @@ class TDatatable extends AThing
 
 
 	//------------------------------------------------------------------------------------------------------------------
+	// Indicates if a real field exists in datatable
+	//------------------------------------------------------------------------------------------------------------------
+	public function HasRealField(string $field) : bool
+	{
+		$data = $this->Data();
+
+		if($this->HasField($field))
+		{
+			return true;
+		}
+
+		if($this->IsSorted() && ($field === $data->FieldSort()))
+		{
+			return true;
+		}
+
+		if($this->IsManaged())
+		{
+			if(($field === $data->FieldCreatedBy())   ||
+			   ($field === $data->FieldCreatedWhen()) ||
+			   ($field === $data->FieldUpdatedBy())   ||
+			   ($field === $data->FieldUpdatedWhen()))
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
 	// CREATE TABLE query
 	//------------------------------------------------------------------------------------------------------------------
 	public function CreateQuery() : string
@@ -254,7 +286,7 @@ class TDatatable extends AThing
 		return $this->Database()->CreateTableStatement(
 			$this->Name(),
 			$this->Keys(),
-			$this->AllFields(),
+			$this->RealFields(),
 			$this->Fulltexts());
 	}
 

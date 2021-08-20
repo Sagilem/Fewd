@@ -136,7 +136,7 @@ class TWordpress extends AModule
 			return null;
 		}
 
-		$output = json_decode($output);
+		$output = json_decode($output, true);
 
 		if(($output === null) && (json_last_error() !== JSON_ERROR_NONE))
 		{

@@ -85,7 +85,7 @@ class TInsert extends ASql
 
 		$sep = $this->Ret() . $indent . $this->Tab();
 
-		$fields = $this->Datatable()->AllFields();
+		$fields = $this->Datatable()->RealFields();
 
 		foreach($fields as $k => $v)
 		{
@@ -122,7 +122,7 @@ class TInsert extends ASql
 		$sep = $this->Ret() . $indent . $this->Tab();
 
 		// For each field :
-		$fields = $this->Datatable()->AllFields();
+		$fields = $this->Datatable()->RealFields();
 
 		foreach($fields as $k => $v)
 		{

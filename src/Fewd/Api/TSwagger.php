@@ -66,6 +66,7 @@ class TSwagger extends AThing
 		$this->Store($res, 'paths'       , $this->PathsDoc()          , true);
 		$this->Store($res, 'components'  , $this->ComponentsDoc()     );
 //		$this->Store($res, 'security'    , $this->SecurityDoc()       );
+		$this->Store($res, 'tags'        , $this->TagsDoc()           );
 
 		if($this->Api()->ExternalDocUrl() !== '')
 		{
@@ -154,7 +155,14 @@ class TSwagger extends AThing
 
 		foreach($endpoint->Operations() as $v)
 		{
-			$res[strtolower($v->Verb())] = $this->OperationDoc($v);
+			$verb = strtolower($v->Verb());
+
+			if($verb === 'getall')
+			{
+				$verb = 'get';
+			}
+
+			$res[$verb] = $this->OperationDoc($v);
 		}
 
 //		$this->Store($res, 'servers'...)
@@ -170,6 +178,12 @@ class TSwagger extends AThing
 	protected function OperationDoc(TOperation $operation) : array
 	{
 		$res = array();
+
+		$chapter = $operation->Endpoint()->Chapter();
+		if($chapter !== null)
+		{
+			$this->Store($res, 'tags', array($chapter->Name()));
+		}
 
 		$this->Store($res, 'summary'    , $operation->Summary()             );
 		$this->Store($res, 'description', $operation->Description()         );
@@ -202,20 +216,20 @@ class TSwagger extends AThing
 		// Generates standard responses depending on verb
 		$verb = $operation->Verb();
 
-		if($verb !== 'GET')
-		{
-			$responses[] = array(404, TApi::ERROR_SUBSET);
-		}
-
 		if(!empty($operation->Parameters()))
 		{
 			$responses[] = array(400, TApi::ERROR_PARAMETERS);
 		}
 
-		if($verb === 'GET')
+		if($verb === 'GETALL')
+		{
+			$responses[] = array(206, $router->Message(206));
+			$responses[] = array(200, $router->Message(200));
+		}
+
+		elseif($verb === 'GET')
 		{
 			$responses[] = array(404, $router->Message(404));
-			$responses[] = array(206, $router->Message(206));
 			$responses[] = array(200, $router->Message(200));
 		}
 
@@ -513,6 +527,55 @@ class TSwagger extends AThing
 	protected function SecurityDoc() : array
 	{
 		$res = array();
+
+		return $res;
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Gets Doc : Tags
+	//------------------------------------------------------------------------------------------------------------------
+	protected function TagsDoc() : array
+	{
+		$res = array();
+
+		foreach($this->Api()->Chapters() as $v)
+		{
+			$res[] = $this->TagDoc($v);
+		}
+
+		return $res;
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Gets Doc : Tag
+	//------------------------------------------------------------------------------------------------------------------
+	protected function TagDoc(TChapter $chapter) : array
+	{
+		$res = array();
+
+		$this->Store($res, 'name'        , $chapter->Name()       , true);
+		$this->Store($res, 'description' , $chapter->Description());
+
+		if($chapter->ExternalDocUrl() !== '')
+		{
+			$this->Store($res, 'externalDocs', $this->TagsExternalDocs($chapter));
+		}
+
+		return $res;
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Gets Doc : Tags external doc
+	//------------------------------------------------------------------------------------------------------------------
+	protected function TagsExternalDocs(TChapter $chapter) : array
+	{
+		$res = array();
+
+		$this->Store($res, 'description', $chapter->ExternalDocDescription());
+		$this->Store($res, 'url'        , $chapter->ExternalDocUrl()        );
 
 		return $res;
 	}
