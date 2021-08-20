@@ -41,12 +41,12 @@ class TSelect extends AConditionSql
 
 	// Sorts
 	private $_Sorts;
-	public final function Sorts()                : array     { return $this->_Sorts;              }
-	public final function Sort(      string $id) : string    { return $this->_Sorts[$id] ?? null; }
-	public final function HasSort(   string $id) : bool      { return isset($this->_Sorts[$id]);  }
-	public       function AddSort(   string $id)             { $this->_Sorts[$id] = $id;          }
-	public       function RemoveSort(string $id)             { unset($this->_Sorts[$id]);         }
-	public       function ClearSorts()                       { $this->_Sorts = array();           }
+	public final function Sorts()                : array                { return $this->_Sorts;              }
+	public final function Sort(      string $id) : string               { return $this->_Sorts[$id] ?? null; }
+	public final function HasSort(   string $id) : bool                 { return isset($this->_Sorts[$id]);  }
+	public       function AddSort(   string $id, string $value)         { $this->_Sorts[$id] = $value;       }
+	public       function RemoveSort(string $id)                        { unset($this->_Sorts[$id]);         }
+	public       function ClearSorts()                                  { $this->_Sorts = array();           }
 
 	// Joins
 	private $_Joins;
@@ -308,11 +308,12 @@ class TSelect extends AConditionSql
 	// Fills a FIELD statement
 	//------------------------------------------------------------------------------------------------------------------
 	protected function FillField(
-		string &$query,
-		array &$bindings,
-		string $key,
-		string $value,
-		string $dottedAlias)
+		string             &$query,
+		array              &$bindings,
+		string              $key,
+		string              $value,
+		TDatatable|TSelect  $source,
+		string              $dottedAlias)
 	{
 		// Possible cases :
 		// 'key'  => ''                   : alias.`key`
@@ -342,12 +343,22 @@ class TSelect extends AConditionSql
 		}
 		elseif(($value === '') || ($value === $key))
 		{
+			if($this->IsFieldIgnored($key, $source))
+			{
+				return;
+			}
+
 			$field = $this->Database()->Quote($key);
 
 			$query.= $dottedAlias . $field . ' AS ' . $field;
 		}
 		elseif($this->Data()->IsAggregation($value))
 		{
+			if($this->IsFieldIgnored($key, $source))
+			{
+				return;
+			}
+
 			$field = $this->Database()->Quote($key);
 
 			$query.= $this->Database()->AggregationStatement($value, $dottedAlias . $field);
@@ -355,6 +366,11 @@ class TSelect extends AConditionSql
 		}
 		else
 		{
+			if($this->IsFieldIgnored($value, $source))
+			{
+				return;
+			}
+
 			$field = $this->Database()->Quote($key);
 
 			$query.= $dottedAlias . $this->Database()->Quote($value) . ' AS ' . $field;
@@ -385,29 +401,22 @@ class TSelect extends AConditionSql
 			{
 				$query.= $sep;
 
-				$this->FillField($query, $bindings, $k, $v, $this->DottedAlias());
+				$this->FillField($query, $bindings, $k, $v, $this->Datatable(), $this->DottedAlias());
 
 				$sep = ',' . $this->Ret() . $indent;
 			}
 		}
 
 		// Joins
-		foreach($this->Joins() as $v)
+		foreach($this->Joins() as $k => $v)
 		{
 			foreach($v->Fields() as $kk => $vv)
 			{
 				$query.= $sep;
 
-				if($v->Alias() === '')
-				{
-					$dottedAlias = '';
-				}
-				else
-				{
-					$dottedAlias = $v->Alias() . '.';
-				}
+				$dottedAlias = $k . '.';
 
-				$this->FillField($query, $bindings, $kk, $vv, $dottedAlias);
+				$this->FillField($query, $bindings, $kk, $vv, $v->Source(), $dottedAlias);
 
 				$sep = ',' . $this->Ret() . $indent;
 			}
@@ -436,7 +445,7 @@ class TSelect extends AConditionSql
 		}
 
 		// Joins
-		foreach($this->Joins() as $v)
+		foreach($this->Joins() as $k => $v)
 		{
 			// JOIN statement
 			$jointype = $v->Jointype();
@@ -464,26 +473,20 @@ class TSelect extends AConditionSql
 			}
 
 			// ALIAS statement
-			if($v->Alias() !== '')
-			{
-				$query.= ' ' . $v->Alias();
-			}
+			$query.= ' ' . $k;
 
-			// Dotted alias
-			if($v->Alias() === '')
-			{
-				$joinedAlias = '';
-			}
-			else
-			{
-				$joinedAlias = $v->Alias() . '.';
-			}
+			$joinedAlias = $k . '.';
 
 			// ON statement
 			$sep = $this->Ret() . $indent . $this->Tab() . 'ON  ';
 
 			foreach($v->Links() as $kk => $vv)
 			{
+				if($this->IsFieldIgnored($vv, $this->Datatable()) || $this->IsFieldIgnored($kk, $v->Source()))
+				{
+					continue;
+				}
+
 				$query.= $sep  . $joinedAlias         . $this->Database()->Quote($kk);
 				$query.= ' = ' . $this->DottedAlias() . $this->Database()->Quote($vv);
 
@@ -499,10 +502,13 @@ class TSelect extends AConditionSql
 	protected function FillWhere(string &$query, array &$bindings, string $indent)
 	{
 		// Inherited
-		parent::FillWhere($query, $bindings, $indent);
+		$where = '';
+		parent::FillWhere($where, $bindings, $indent);
+
+		$query.= $where;
 
 		// Inits separator
-		if(empty($this->Conditions()))
+		if($where === '')
 		{
 			$sep = $this->Ret() . $indent . 'WHERE ';
 		}
@@ -512,13 +518,13 @@ class TSelect extends AConditionSql
 		}
 
 		// Adds join conditions
-		foreach($this->Joins() as $v)
+		foreach($this->Joins() as $k => $v)
 		{
 			foreach($v->Conditions() as $kk => $vv)
 			{
 				$query.= $sep;
 
-				$this->FillCondition($query, $bindings, $v->Alias(), $kk, $vv);
+				$this->FillCondition($query, $bindings, $v->Source(), $k, $kk, $vv);
 
 				$sep = $this->Ret() . $indent . 'AND   ';
 			}
@@ -541,18 +547,34 @@ class TSelect extends AConditionSql
 			//
 			// 'key'  => ''                : alias.`key`
 			// 'key'  => 'key'             : alias.`key`
+			// 'key'  => 'alias'           : alias.`key`
 			// 'key'  => 'other_alias'     : other_alias.`key`
 			// 'key@' => ''                : key
-			if(($v === '') || ($v === $k))
-			{
-				$query.= $sep . $this->DottedAlias() . $this->Database()->Quote($k);
-			}
-			elseif(substr($k, -1) === '@')
+			if(substr($k, -1) === '@')
 			{
 				$query.= $sep . substr($k, 0, -1);
 			}
+			elseif(($v === '') || ($v === $k) || ($v === $this->Alias()))
+			{
+				if($this->IsFieldIgnored($k, $this->Datatable()))
+				{
+					continue;
+				}
+
+				$query.= $sep . $this->DottedAlias() . $this->Database()->Quote($k);
+			}
 			else
 			{
+				// If the "other alias" does not correspond to a join,
+				// Or if field must be ignored :
+				// Ignores it
+				if(!$this->HasJoin($v) || $this->IsFieldIgnored($k, $this->Join($v)->Source()))
+				{
+					continue;
+				}
+
+				// Otherwise :
+				// Adds it
 				$query.= $sep . $v . '.' . $this->Database()->Quote($k);
 			}
 
@@ -572,7 +594,7 @@ class TSelect extends AConditionSql
 		{
 			$query.= $sep;
 
-			$this->FillCondition($query, $bindings, $this->Alias(), $k, $v);
+			$this->FillCondition($query, $bindings, $this->Datatable(), $this->Alias(), $k, $v);
 
 			$sep = $this->Ret() . $indent . 'AND    ';
 		}
@@ -594,19 +616,47 @@ class TSelect extends AConditionSql
 			//
 			// 'key'  => ''                : alias.`key`
 			// 'key'  => 'key'             : alias.`key`
+			// 'key'  => 'alias'           : alias.`key`
 			// 'key'  => 'other_alias'     : other_alias.`key`
 			// 'key@' => ''                : key
-			if(($v === '') || ($v === $k))
+			//
+			// Add a "-" just before key to sort it in descending order, for instance : '-key' => 'key'
+			if(substr($k, 0, 1) === '-')
 			{
-				$query.= $sep . $this->DottedAlias() . $this->Database()->Quote($k);
-			}
-			elseif(substr($k, -1) === '@')
-			{
-				$query.= $sep . substr($k, 0, -1);
+				$k = substr($k, 1);
+				$direction = ' DESC';
 			}
 			else
 			{
-				$query.= $sep . $v . '.' . $this->Database()->Quote($k);
+				$direction = ' ASC';
+			}
+
+			if(substr($k, -1) === '@')
+			{
+				$query.= $sep . substr($k, 0, -1) . $direction;
+			}
+			elseif(($v === '') || ($v === $k) || ($v === $this->Alias()))
+			{
+				if($this->IsFieldIgnored($k, $this->Datatable()))
+				{
+					continue;
+				}
+
+				$query.= $sep . $this->DottedAlias() . $this->Database()->Quote($k) . $direction;
+			}
+			else
+			{
+				// If the "other alias" does not correspond to a join,
+				// Or if field must be ignored :
+				// Ignores it
+				if(!$this->HasJoin($v) || $this->IsFieldIgnored($k, $this->Join($v)->Source()))
+				{
+					continue;
+				}
+
+				// Otherwise :
+				// Adds it
+				$query.= $sep . $v . '.' . $this->Database()->Quote($k) . $direction;
 			}
 
 			$sep = ',' . $this->Ret() . $this->Tab() . $indent;

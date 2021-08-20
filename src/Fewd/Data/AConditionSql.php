@@ -107,7 +107,13 @@ abstract class AConditionSql extends ASql
 	// []         : BETWEEN     (with an array of two values)
 	// ][         : NOT BETWEEN (with an array of two values)
 	//------------------------------------------------------------------------------------------------------------------
-	protected function FillCondition(string &$query, array &$bindings, string $alias, string $key, string|array $value)
+	protected function FillCondition(
+		string             &$query,
+		array              &$bindings,
+		TDatatable|TSelect  $source,
+		string              $alias,
+		string              $key,
+		string|array        $value)
 	{
 		// Gets operator from key
 		$operator = substr($key, -2);
@@ -178,6 +184,12 @@ abstract class AConditionSql extends ASql
 		if($isDirect = (substr($key, -1) === '&'))
 		{
 			$key = substr($key, 0, -1);
+		}
+
+		// Checks if field must be ignored
+		if($this->IsFieldIgnored($key, $source))
+		{
+			return;
 		}
 
 		// Determines the left part of condition (key and operator)
@@ -313,7 +325,7 @@ abstract class AConditionSql extends ASql
 		{
 			$query.= $sep;
 
-			$this->FillCondition($query, $bindings, $this->Alias(), $k, $v);
+			$this->FillCondition($query, $bindings, $this->Datatable(), $this->Alias(), $k, $v);
 
 			$sep = $this->Ret() . $indent . 'AND   ';
 		}

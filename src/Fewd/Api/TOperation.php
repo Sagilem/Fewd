@@ -153,6 +153,11 @@ class TOperation extends AThing
 		// Generates a summary, beginning with verb
 		$res = ucfirst(strtolower($this->Verb()));
 
+		if($res === 'Getall')
+		{
+			$res = 'Get all';
+		}
+
 		// Summary contains path (without wildcards)
 		$path = $this->Endpoint()->Path();
 
@@ -208,6 +213,11 @@ class TOperation extends AThing
 
 		// Generates a code, beginning with verb
 		$res = strtolower($this->Verb());
+
+		if($res === 'getall')
+		{
+			$res = 'getAll';
+		}
 
 		// Code contains path (without wildcards)
 		$path = $this->Endpoint()->Path();
@@ -678,12 +688,19 @@ class TOperation extends AThing
 			{
 				$v = trim($v);
 
-				if($v === '')
+				if(($v === '') || ($v === '-'))
 				{
 					continue;
 				}
 
-				$res[$v] = $v;
+				if(substr($v, 0, 1) === '-')
+				{
+					$res[$v] = substr($v, 1);
+				}
+				else
+				{
+					$res[$v] = $v;
+				}
 			}
 		}
 
@@ -694,10 +711,8 @@ class TOperation extends AThing
 	//------------------------------------------------------------------------------------------------------------------
 	// Sorts response into ascending order
 	//------------------------------------------------------------------------------------------------------------------
-	protected function Sort(mixed $response, array $sorts) : array
+	public function Sort(mixed $response, array $sorts) : mixed
 	{
-		$order = array();
-
 		// If no sort provided :
 		// Does nothing
 		if(empty($sorts))
@@ -705,59 +720,52 @@ class TOperation extends AThing
 			return $response;
 		}
 
-		// If response is not an array :
+		// If response is not a collection :
 		// Does nothing
-		if(!is_array($response))
+		if(!$this->Api()->IsCollectionResponse($response))
 		{
 			return $response;
 		}
 
-		// For each record in response :
-		foreach($response as $k => $v)
+		// Sorts array
+		usort($response, function(mixed $a, mixed $b) use ($sorts) : int
 		{
-			// Gets record index
-			$index = '';
-			$cur   = $v;
-
-			foreach($sorts as $vv)
+			// For each sort field :
+			foreach($sorts as $k => $v)
 			{
-				if(!isset($cur[$vv]))
+				$factor = 1;
+
+				if(substr($k, 0, 1) === '-')
 				{
-					$index = '';
-					break;
+					$k      = substr($k, 1);
+					$factor = -1;
 				}
 
-				$index = $cur[$vv];
-				$cur   = $index;
+				// Sort fields that are not present in response are ignored
+				if(!isset($a[$k]) || !isset($b[$k]))
+				{
+					continue;
+				}
+
+				// if both values for the current sort field are the same :
+				// Goes on with next record
+				if($a[$k] < $b[$k])
+				{
+					return -$factor;
+				}
+				elseif($a[$k] > $b[$k])
+				{
+					return $factor;
+				}
 			}
 
-			// If index is an array :
-			// Unable to sort arrays between themselves
-			if(is_array($index))
-			{
-				return $response;
-			}
+			// Result
+			return 0;
+		});
 
-			// Adds some blanks before index, to ensure compatibility between number and string sort
-			$index = str_pad($index, 20);
-
-			// Stores order
-			$order[$index] = $k;
-		}
-
-		// Sorts
-		ksort($order);
-
-		// Generates a sorted array
-		$res = array();
-
-		foreach($order as $v)
-		{
-			$res[] = $response[$v];
-		}
 
 		// Result
-		return $res;
+		return $response;
 	}
 
 
@@ -812,9 +820,6 @@ class TOperation extends AThing
 			// Limits response to a set of filters
 			$res = $this->LimitToFilters($res, $args);
 		}
-
-		// Ensures that data is sorted
-		$res = $this->Sort($res, $sorts);
 
 		// Result
 		return $res;

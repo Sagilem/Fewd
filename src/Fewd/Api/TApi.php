@@ -18,7 +18,6 @@ class TApi extends AModule
 	public const ERROR_MANDATORY_PARAMETER = 'Mandatory parameter \'{{PARAMETER}}\' is missing.';
 	public const ERROR_MANDATORY_PROPERTY  = 'Mandatory property \'{{PROPERTY}}\' is missing.';
 	public const ERROR_INCORRECT           = 'Incorrect value for parameter \'{{PARAMETER}}\' : {{MESSAGE}}';
-	public const ERROR_SUBSET              = 'Operation is not allowed on resource subset.';
 	public const ERROR_PARAMETERS          = 'Wrong parameters.';
 	public const ERROR_RESPONSE            = 'Wrong \'{{TYPE}}\' response.';
 	public const ERROR_NUMERIC             = 'value must be numeric.';
@@ -104,6 +103,13 @@ class TApi extends AModule
 	// ExternalDocUrl
 	private $_ExternalDocUrl;
 	public final function ExternalDocUrl() : string { return $this->_ExternalDocUrl; }
+
+	// Chapters
+	private $_Chapters;
+	public final function Chapters()             : array          { return $this->_Chapters;              }
+	public final function Chapter(   string $id) : TChapter       { return $this->_Chapters[$id] ?? null; }
+	public final function HasChapter(string $id) : bool           { return isset($this->_Chapters[$id]);  }
+	public       function AddChapter(string $id, TChapter $value) { $this->_Chapters[$id] = $value;       }
 
 	// Endpoints
 	private $_Endpoints;
@@ -668,26 +674,19 @@ class TApi extends AModule
 
 
 	//------------------------------------------------------------------------------------------------------------------
-	// Gets all records through a given endpoint
+	// Gets all data through a given endpoint
 	//------------------------------------------------------------------------------------------------------------------
 	public function GetAll(
 		string $url,
 		string $token   = '',
 		array  $options = array()) : bool|int|float|string|array|null
 	{
-		$records = $this->Call($url, 'GET', '', array(), $token, $options);
-
-		if($records === false)
-		{
-			return null;
-		}
-
-		return $records;
+		return $this->Call($url, 'GET', '', array(), $token, $options);
 	}
 
 
 	//------------------------------------------------------------------------------------------------------------------
-	// Gets a record by its id  through a given endpoint
+	// Gets data through a given endpoint
 	//------------------------------------------------------------------------------------------------------------------
 	public function Get(
 		string $url,
@@ -695,22 +694,7 @@ class TApi extends AModule
 		string $token   = '',
 		array  $options = array()) : bool|int|float|string|array|null
 	{
-		$records = $this->Call($url, 'GET', $id, array(), $token, $options);
-
-		if($records === false)
-		{
-			return null;
-		}
-
-		if(is_array($records))
-		{
-			foreach($records as $v)
-			{
-				return $v;
-			}
-		}
-
-		return $records;
+		return $this->Call($url, 'GET', $id, array(), $token, $options);
 	}
 
 
@@ -725,7 +709,7 @@ class TApi extends AModule
 	{
 		$res = $this->Call($url, 'POST', '', $data, $token, $options);
 
-		return ($res !== false);
+		return ($res !== null);
 	}
 
 
@@ -741,7 +725,7 @@ class TApi extends AModule
 	{
 		$res = $this->Call($url, 'PUT', $id, $data, $token, $options);
 
-		return ($res !== false);
+		return ($res !== null);
 	}
 
 
@@ -785,7 +769,7 @@ class TApi extends AModule
 		string $id,
 		array  $data,
 		string $token,
-		array  $options = array()) : bool|int|float|string|array
+		array  $options = array()) : bool|int|float|string|array|null
     {
 		// Launches the curl session
 		$curl = curl_init();
@@ -853,7 +837,7 @@ class TApi extends AModule
 
 		if(($this->LastErrorCode() < 200) || ($this->LastErrorCode() >= 300))
 		{
-			return false;
+			return null;
 		}
 
 		// Result
@@ -1015,14 +999,32 @@ class TApi extends AModule
 
 
 	//------------------------------------------------------------------------------------------------------------------
+	// Declares a new chapter
+	//------------------------------------------------------------------------------------------------------------------
+	public function DeclareChapter(
+		string $name,
+		string $description            = '',
+		string $externalDocDescription = '',
+		string $externalDocUrl         = '') : ?TChapter
+	{
+		$res = $this->MakeChapter($name, $description, $externalDocDescription, $externalDocUrl);
+
+		$this->AddChapter($name, $res);
+
+		return $res;
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
 	// Declares a new endpoint (only when needed, to gain some performance)
 	//------------------------------------------------------------------------------------------------------------------
 	public function DeclareEndpoint(
-		string $path,
-		string $summary      = '',
-		string $description  = '',
-		int    $maximumLimit = 0,
-		int    $maximumAge   = 0) : ?TEndpoint
+		string   $path,
+		string   $summary      = '',
+		string   $description  = '',
+		TChapter $chapter      = null,
+		int      $maximumLimit = 0,
+		int      $maximumAge   = 0) : ?TEndpoint
 	{
 		// Endpoints must all be declared on the portal
 		// On endpoint calls, just the corresponding endpoint is needed only
@@ -1037,7 +1039,7 @@ class TApi extends AModule
 			return $this->Endpoint($path);
 		}
 
-		$res = $this->MakeEndpoint($path, $summary, $description, $maximumLimit, $maximumAge);
+		$res = $this->MakeEndpoint($path, $summary, $description, $chapter, $maximumLimit, $maximumAge);
 
 		$this->AddEndpoint($path, $res);
 
@@ -1309,7 +1311,7 @@ class TApi extends AModule
 	{
 		return array(
 			$this->CountLabel() => $count,
-			$this->Datalabel()  => $data);
+			$this->DataLabel()  => $data);
 	}
 
 
@@ -1344,13 +1346,13 @@ class TApi extends AModule
 		{
 			foreach($response as $k => $v)
 			{
-				if(is_int($k))
+				if(!is_int($k) || !is_array($v))
 				{
-					return true;
+					return false;
 				}
-
-				break;
 			}
+
+			return true;
 		}
 
 		return false;
@@ -1516,7 +1518,7 @@ class TApi extends AModule
 	//------------------------------------------------------------------------------------------------------------------
 	// Exits with a 206 code
 	//------------------------------------------------------------------------------------------------------------------
-	// 206 corresponds to a partial GET
+	// 206 corresponds to a partial GETALL
 	//------------------------------------------------------------------------------------------------------------------
 	protected function Exit206(mixed $response, int $offset, int $limit, int $count, TEndpoint $endpoint)
 	{
@@ -1530,6 +1532,7 @@ class TApi extends AModule
 		http_response_code(206);
 
 		// If global count is determined :
+		// Defines links to first, previous, next and last pages
 		if($count >= 0)
 		{
 			// Prepares current url
@@ -1584,7 +1587,7 @@ class TApi extends AModule
 
 
 	//------------------------------------------------------------------------------------------------------------------
-	// Exists on an error response
+	// Exits on an error response
 	//------------------------------------------------------------------------------------------------------------------
 	protected function ExitError(array $errorResponse, TEndpoint $endpoint)
 	{
@@ -1596,47 +1599,114 @@ class TApi extends AModule
 
 
 	//------------------------------------------------------------------------------------------------------------------
+	// Runs a GETALL
+	//------------------------------------------------------------------------------------------------------------------
+	protected function RunGetAll(mixed $response, int $offset, int $limit, TEndpoint $endpoint)
+	{
+		// If response is an error :
+		// Outputs this error
+		if($this->IsErrorResponse($response))
+		{
+			$this->ExitError($response, $endpoint);
+		}
+
+		// If response is counted :
+		if($this->IsCountedResponse($response))
+		{
+			// Gets count and data
+			$response   = $response[$this->Datalabel() ];
+			$count      = $response[$this->CountLabel()];
+
+			// Ensures that response is a not indexed array
+			// (otherwise, it could be a problem to render as a list in JSON)
+			if(is_array($response))
+			{
+				$response = array_values($response);
+			}
+			else
+			{
+				$response = array();
+			}
+
+			// If response is not complete :
+			if(($limit > 0) && (($offset !== 0) || ($count > $limit)))
+			{
+				// Ensures that current page itself does not overflow the limit
+				if(count($response) > $limit)
+				{
+					$response = array_slice($response, 0, $limit);
+				}
+
+				// Outputs a partial response
+				$this->Exit206($response, $offset, $limit, $count, $endpoint);
+			}
+
+			// Otherwise :
+			// Outputs a standard response
+			$this->Exit200($response, $endpoint);
+		}
+
+		// If response is a collection :
+		elseif($this->IsCollectionResponse($response))
+		{
+			// Gets response count
+			$count = count($response);
+
+			// Ensures that response is a not indexed array
+			// (otherwise, it could be a problem to render as a list in JSON)
+			if(is_array($response))
+			{
+				$response = array_values($response);
+			}
+			else
+			{
+				$response = array();
+			}
+
+			// If response is not complete :
+			if(($limit > 0) && (($offset !== 0) || ($count > $limit)))
+			{
+				// Ensures that collection does not overflow the limit
+				if($count > $limit)
+				{
+					$response = array_slice($response, 0, $limit);
+				}
+
+				// Outputs a partial response
+				$this->Exit206($response, $offset, $limit, -1, $endpoint);
+			}
+
+			// Otherwise :
+			// Outputs a standard response
+			$this->Exit200($response, $endpoint);
+		}
+
+		// Other cases :
+		// Returns an empty array
+		else
+		{
+			$this->Exit200(array(), $endpoint);
+		}
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
 	// Runs a GET
 	//------------------------------------------------------------------------------------------------------------------
-	protected function RunGet(mixed $response, int $offset, int $limit, TEndpoint $endpoint)
+	protected function RunGet(mixed $response, TEndpoint $endpoint)
 	{
+		// If response is an error :
+		// Outputs this error
+		if($this->IsErrorResponse($response))
+		{
+			$this->ExitError($response, $endpoint);
+		}
+
 		// If no response :
 		// This is a "not found" error
 		if($response === null)
 		{
 			$this->Exit(404, $endpoint);
-		}
-
-		// If response is counted :
-		// Outputs a partial response if it is not complete
-		if($this->IsCountedResponse($response))
-		{
-			$count    = $response[$this->CountLabel()];
-			$response = $response[$this->Datalabel() ];
-
-			if(($limit > 0) && (($offset !== 0) || ($count > $limit)))
-			{
-				$this->Exit206($response, $offset, $limit, $count, $endpoint);
-			}
-		}
-
-		// Otherwise,
-		// If response is a collection :
-		// Outputs a partial response if it is not complete
-		elseif($this->IsCollectionResponse($response))
-		{
-			if(($limit > 0) && (($offset !== 0) || count($response) > $limit))
-			{
-				$this->Exit206($response, $offset, $limit, -1, $endpoint);
-			}
-		}
-
-		// Otherwise,
-		// If response is an error :
-		// OUtputs an error
-		elseif($this->IsErrorResponse($response))
-		{
-			$this->ExitError($response, $endpoint);
 		}
 
 		// Outputs a standard response in any other case
@@ -1710,6 +1780,14 @@ class TApi extends AModule
 			$this->Exit200(array(), $endpoint);
 		}
 
+		// If verb is GET,
+		// And operation has no operation with GET :
+		// Tries with GETALL
+		if(($verb === 'GET') && !$endpoint->HasOperation($verb))
+		{
+			$verb = 'GETALL';
+		}
+
 		// If verb is not allowed for the current endpoint :
 		// Nothing to run
 		if(!$endpoint->HasOperation($verb))
@@ -1743,19 +1821,27 @@ class TApi extends AModule
 			$limit = 0;
 		}
 
-		// If a subset was provided for a verb other than GET :
-		// This is an error (the endpoint must be explicitely declared)
-		if(($verb !== 'GET') && ($subset !== ''))
+		// Fields and subset are only available for GET operations
+		if($verb !== 'GET')
 		{
-			$this->Exit(404, $endpoint, self::ERROR_SUBSET);
+			$subset = '';
+			$fields = '';
 		}
 
-		// Gets the body from the Api call (except from GET and DELETE : no body)
+		// Sort, offset and limit are only available for GETALL operations
+		if($verb !== 'GETALL')
+		{
+			$sort   = '';
+			$offset = 0;
+			$limit  = 0;
+		}
+
+		// Gets the body from the Api call (except from GET, GETALL and DELETE : no body)
 		$body = null;
 
-		if(($verb !== 'GET') && ($verb !== 'DELETE'))
+		if(($verb !== 'GET') && ($verb !== 'GETALL') && ($verb !== 'DELETE'))
 		{
-			$body = json_decode(file_get_contents("php://input"));
+			$body = json_decode(file_get_contents("php://input"), true);
 		}
 
 		if($body === null)
@@ -1784,9 +1870,13 @@ class TApi extends AModule
 		}
 
 		// Outputs the response, depending on the verb
-		if($verb === 'GET')
+		if($verb === 'GETALL')
 		{
-			$this->RunGet($response, $offset, $limit, $endpoint);
+			$this->RunGetAll($response, $offset, $limit, $endpoint);
+		}
+		elseif($verb === 'GET')
+		{
+			$this->RunGet($response, $endpoint);
 		}
 		elseif($verb === 'POST')
 		{
@@ -1800,16 +1890,42 @@ class TApi extends AModule
 
 
 	//------------------------------------------------------------------------------------------------------------------
+	// Maker : Chapter
+	//------------------------------------------------------------------------------------------------------------------
+	protected function MakeChapter(
+		string $name,
+		string $description            = '',
+		string $externalDocDescription = '',
+		string $externalDocUrl         = '') : TChapter
+	{
+		$res = new TChapter($this->Core(), $this, $name, $description, $externalDocDescription, $externalDocUrl);
+		$res->Init();
+
+		return $res;
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
 	// Maker : Endpoint
 	//------------------------------------------------------------------------------------------------------------------
 	protected function MakeEndpoint(
-		string $path,
-		string $summary      = '',
-		string $description  = '',
-		int    $maximumLimit = 0,
-		int    $maximumAge   = 0) : TEndpoint
+		string   $path,
+		string   $summary      = '',
+		string   $description  = '',
+		TChapter $chapter      = null,
+		int      $maximumLimit = 0,
+		int      $maximumAge   = 0) : TEndpoint
 	{
-		$res = new TEndpoint($this->Core(), $this, $path, $summary, $description, $maximumLimit, $maximumAge);
+		$res = new TEndpoint(
+			$this->Core(),
+			$this,
+			$path,
+			$summary,
+			$description,
+			$chapter,
+			$maximumLimit,
+			$maximumAge);
+
 		$res->Init();
 
 		return $res;
@@ -1854,7 +1970,7 @@ class TApi extends AModule
 	//------------------------------------------------------------------------------------------------------------------
 	// Maker : Parameter
 	//------------------------------------------------------------------------------------------------------------------
-	public function MakeParameter(
+	protected function MakeParameter(
 		string $name,
 		AType  $type,
 		bool   $isMandatory  = false,
