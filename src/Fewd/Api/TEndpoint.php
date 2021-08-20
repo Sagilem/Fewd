@@ -30,6 +30,10 @@ class TEndpoint extends AThing
 	private $_Description;
 	public final function Description() : string { return $this->_Description; }
 
+	// Chapter
+	private $_Chapter;
+	public final function Chapter() : ?TChapter { return $this->_Chapter; }
+
 	// Maximum limit (i.e. maximum records number that could be GET at once)
 	private $_MaximumLimit;
 	public final function MaximumLimit() : int { return $this->_MaximumLimit; }
@@ -55,13 +59,14 @@ class TEndpoint extends AThing
 	// Constructor
 	//------------------------------------------------------------------------------------------------------------------
 	public function __construct(
-		TCore  $core,
-		TApi   $api,
-		string $path,
-		string $summary,
-		string $description,
-		int    $maximumLimit,
-		int    $maximumAge)
+		TCore     $core,
+		TApi      $api,
+		string    $path,
+		string    $summary,
+		string    $description,
+		?TChapter $chapter,
+		int       $maximumLimit,
+		int       $maximumAge)
 	{
 		parent::__construct($core);
 
@@ -69,6 +74,7 @@ class TEndpoint extends AThing
 		$this->_Path         = $path;
 		$this->_Summary      = $summary;
 		$this->_Description  = $description;
+		$this->_Chapter      = $chapter;
 		$this->_MaximumLimit = $maximumLimit;
 		$this->_MaximumAge   = $maximumAge;
 	}

@@ -47,6 +47,12 @@ abstract class ASql extends AThing
 	private $_Tab;
 	public final function Tab() : string { return $this->_Tab; }
 
+	// Indicates if fields that are not part of the datatable are just ignored (otherwise, an error will be raised)
+	private $_IsTolerant;
+	public function IsTolerant() : bool { return $this->_IsTolerant;  }
+	public function TolerantOn()        { $this->_IsTolerant = true;  }
+	public function TolerantOff()       { $this->_IsTolerant = false; }
+
 
 	//------------------------------------------------------------------------------------------------------------------
 	// Constructor
@@ -80,6 +86,8 @@ abstract class ASql extends AThing
 		$this->SetAlias($this->Alias());
 
 		$this->Clear();
+
+		$this->TolerantOn();
 	}
 
 
@@ -130,6 +138,35 @@ abstract class ASql extends AThing
 		}
 
 		return $this->Alias() . '.';
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Checks if a field must be ignored for a given source
+	//------------------------------------------------------------------------------------------------------------------
+	protected function IsFieldIgnored(string $field, TDatatable|TSelect $source) : bool
+	{
+		// Datatable case
+		if($source instanceof TDatatable)
+		{
+			if($source->HasRealField($field))
+			{
+				return false;
+			}
+		}
+
+		// Select case
+		elseif($source->HasField($field      ) ||
+		       $source->HasField($field . ':') ||
+		       $source->HasField($field . '&') ||
+		       $source->HasField($field . '@'))
+		{
+			return false;
+		}
+
+		// If field does not belong to source :
+		// Ignores it (when tolerant to errors) or not
+		return $this->IsTolerant();
 	}
 
 
