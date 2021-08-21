@@ -770,6 +770,21 @@ class TOperation extends AThing
 
 
 	//------------------------------------------------------------------------------------------------------------------
+	// Raw endpoint response
+	//------------------------------------------------------------------------------------------------------------------
+	protected function RawResponse(
+		callable $callback,
+		array    $args,
+		array    $body,
+		array    $sorts,
+		int      $offset,
+		int      $limit) : mixed
+	{
+		return call_user_func($callback, $this, $args, $body, $sorts, $offset, $limit);
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
 	// Endpoint response
 	//------------------------------------------------------------------------------------------------------------------
 	public function Response(
@@ -788,7 +803,7 @@ class TOperation extends AThing
 		$args = $this->Filters($args);
 
 		// Gets response
-		$res = call_user_func($this->Callback(), $this, $args, $body, $sorts, $offset, $limit);
+		$res = $this->RawResponse($this->Callback(), $args, $body, $sorts, $offset, $limit);
 
 		// A null, callable or resource response is directly returned as "null"
 		if(($res === null) || is_callable($res) || is_resource($res))
@@ -810,12 +825,13 @@ class TOperation extends AThing
 			{
 				$res = $this->LimitToSubset($res, $subset);
 			}
+		}
 
-			// Limits response to a set of fields
-			if($fields !== '')
-			{
-				$res = $this->LimitToFields($res, $fields);
-			}
+		// If verb is GETALL :
+		elseif($this->Verb() === 'GETALL')
+		{
+			// Ensures that data is sorted
+			$res = $this->Sort($res, $sorts);
 
 			// Limits response to a set of filters
 			$res = $this->LimitToFilters($res, $args);

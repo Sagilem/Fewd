@@ -1329,7 +1329,7 @@ class TApi extends AModule
 	//------------------------------------------------------------------------------------------------------------------
 	// Indicates if the given response is counted (i.e. array('count' => <int>, 'data' => <array>))
 	//------------------------------------------------------------------------------------------------------------------
-	protected function IsCountedResponse(mixed $response) : bool
+	public function IsCountedResponse(mixed $response) : bool
 	{
 		return (isset(   $response[$this->CountLabel()]) &&
 		        isset(   $response[$this->DataLabel() ]) &&
