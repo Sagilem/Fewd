@@ -825,6 +825,12 @@ class TOperation extends AThing
 			{
 				$res = $this->LimitToSubset($res, $subset);
 			}
+
+			// Limits response to a set of fields
+			if($fields !== '')
+			{
+				$res = $this->LimitToFields($res, $fields);
+			}
 		}
 
 		// If verb is GETALL :
