@@ -37,7 +37,7 @@ class TSwagger extends AThing
 	//------------------------------------------------------------------------------------------------------------------
 	protected function Store(array &$array, string $key, int|float|bool|string|array $value, bool $isMandatory = false)
 	{
-		if($isMandatory || !empty($value))
+		if($isMandatory || !empty($value) || ($value === 0))
 		{
 			if($key === '')
 			{
@@ -193,14 +193,58 @@ class TSwagger extends AThing
 			$this->Store($res, 'externalDocs', $this->OperationExternalDocsDoc($operation));
 		}
 
-		$this->Store($res, 'operationId', $operation->Code()                );
+		$this->Store($res, 'operationId', $operation->Code());
 
 		$this->Store($res, 'parameters' , $this->ParametersDoc(          $operation));
-//		$this->Store($res, 'requestBody', $this->OperationRequestBodyDoc($operation));
+		$this->Store($res, 'requestBody', $this->OperationRequestBodyDoc($operation));
 		$this->Store($res, 'responses'  , $this->OperationResponsesDoc(  $operation), true);
-		$this->Store($res, 'deprecated' , $operation->IsDeprecated()        );
+		$this->Store($res, 'deprecated' , $operation->IsDeprecated());
 //		$this->Store($res, 'security'   , $this->OperationSecurityDoc(   $operation));
 
+		return $res;
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Gets Doc : Operation request body
+	//------------------------------------------------------------------------------------------------------------------
+	protected function OperationRequestBodyDoc(TOperation $operation) : array
+	{
+		$res = array();
+
+		// No request body for POST, PUT and PATCH
+		$verb = $operation->Verb();
+
+		if(($verb !== 'POST') && ($verb !== 'PUT') && ($verb !== 'PATCH'))
+		{
+			return $res;
+		}
+
+		// Body type documentation
+		$bodyType = $operation->BodyType();
+
+		if($bodyType !== null)
+		{
+			// Description
+			$this->Store($res, 'description', $bodyType->Name());
+
+			// Content (schema)
+			$schema = $this->TypeDoc($bodyType);
+
+			if(empty($schema))
+			{
+				$this->Store($res, 'content', array());
+			}
+			else
+			{
+				$this->Store($res, 'content', array('application/json' => array('schema' => $schema)));
+			}
+
+			// Required
+			$this->Store($res, 'required', true);
+		}
+
+		// Result
 		return $res;
 	}
 
@@ -216,10 +260,7 @@ class TSwagger extends AThing
 		// Generates standard responses depending on verb
 		$verb = $operation->Verb();
 
-		if(!empty($operation->Parameters()))
-		{
-			$responses[] = array(400, TApi::ERROR_PARAMETERS);
-		}
+		$responses[] = array(400, TApi::ERROR_PARAMETERS);
 
 		if($verb === 'GETALL')
 		{
@@ -240,9 +281,10 @@ class TSwagger extends AThing
 		}
 		else
 		{
-			$responses[] = array(409, $router->Message(409));
 			$responses[] = array(200, $router->Message(200));
 		}
+
+		ksort($responses);
 
 		// Generates doc
 		$res = array();
@@ -268,9 +310,9 @@ class TSwagger extends AThing
 
 		if($code >= 400)
 		{
-			$schema = array('$ref' => '#/components/schemas/ErrorModel');
+			$schema = array('$ref' => '#/components/schemas/Error');
 		}
-		elseif($operation->ResponseType() === null)
+		elseif(($operation->ResponseType() === null) || (($code !== 200) && ($code !== 206)))
 		{
 			$schema = array();
 		}
@@ -279,7 +321,11 @@ class TSwagger extends AThing
 			$schema = $this->TypeDoc($operation->ResponseType());
 		}
 
-		if(!empty($schema))
+		if(empty($schema))
+		{
+			$this->Store($res, 'content', array());
+		}
+		else
 		{
 			$this->Store($res, 'content', array('application/json' => array('schema' => $schema)));
 		}
@@ -295,9 +341,51 @@ class TSwagger extends AThing
 	{
 		$res = array();
 
+		foreach($operation->Endpoint()->Wildcards() as $k => $v)
+		{
+			$this->Store($res, '', $this->WildcardDoc($operation, $k, $v));
+		}
+
 		foreach($operation->Parameters() as $v)
 		{
 			$this->Store($res, '', $this->ParameterDoc($operation, $v));
+		}
+
+		return $res;
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Gets Doc : Wildcard
+	//------------------------------------------------------------------------------------------------------------------
+	protected function WildcardDoc(TOperation $operation, string $name, ?AType $type) : array
+	{
+		$res = array();
+
+		if($operation->HasParameter($name))
+		{
+			$parameter = $operation->Parameter($name);
+
+			$description = $this->Core()->Concatenate(' : ', $parameter->Summary(), $parameter->Description());
+		}
+		else
+		{
+			$description = '';
+		}
+
+		$this->Store($res, 'name', $name , true);
+		$this->Store($res, 'in'  , 'path', true);
+
+		if($description !== '')
+		{
+			$this->Store($res, 'description', $description);
+		}
+
+		$this->Store($res, 'required', true);
+
+		if($type !== null)
+		{
+			$this->Store($res, 'schema', $this->TypeDoc($type, null, $type->Default()), true);
 		}
 
 		return $res;
@@ -311,15 +399,19 @@ class TSwagger extends AThing
 	{
 		$res = array();
 
-		$isWildcard = $operation->Endpoint()->HasWildcard($parameter->Name());
+		if(!$operation->Endpoint()->HasWildcard($parameter->Name()))
+		{
+			return $res;
+		}
+
 		$description = $this->Core()->Concatenate(' : ', $parameter->Summary(), $parameter->Description());
 
-		$this->Store($res, 'name'           , $parameter->Name()            , true);
-		$this->Store($res, 'in'             , $isWildcard ? 'path' : 'query', true);
-		$this->Store($res, 'description'    , $description                  );
-		$this->Store($res, 'required'       , $parameter->IsMandatory()     );
+		$this->Store($res, 'name'           , $parameter->Name()       , true);
+		$this->Store($res, 'in'             , 'query'                  , true);
+		$this->Store($res, 'description'    , $description             );
+		$this->Store($res, 'required'       , $parameter->IsMandatory());
 
-		if($parameter->IsMandatory() || $isWildcard)
+		if($parameter->IsMandatory())
 		{
 			$this->Store($res, 'required', true);
 		}
@@ -329,7 +421,7 @@ class TSwagger extends AThing
 			$this->Store($res, 'deprecated', true);
 		}
 
-		$this->Store($res, 'schema', $this->TypeDoc($parameter->Type(), $parameter->Default()), true);
+		$this->Store($res, 'schema', $this->TypeDoc($parameter->Type(), null, $parameter->Default()), true);
 
 		return $res;
 	}
@@ -339,7 +431,7 @@ class TSwagger extends AThing
 	//------------------------------------------------------------------------------------------------------------------
 	// Gets Doc : Type
 	//------------------------------------------------------------------------------------------------------------------
-	protected function TypeDoc(?AType $type, mixed $default = null) : array
+	protected function TypeDoc(?AType $type, mixed $sample = null, mixed $default = null) : array
 	{
 		$res = array();
 
@@ -440,10 +532,14 @@ class TSwagger extends AThing
 			{
 				$this->Store($res, 'items', $this->TypeDoc($type->ItemsType()));
 			}
+			else
+			{
+				$this->Store($res, 'items', array('type' => 'object'));
+			}
 		}
 
-		// Entity case
-		elseif($type instanceof TTypeEntity)
+		// Record case
+		elseif($type instanceof TTypeRecord)
 		{
 			$this->_Components[$type->Name()] = $type;
 
@@ -456,8 +552,22 @@ class TSwagger extends AThing
 			$this->Store($res, 'type', $type->Name(), true);
 		}
 
+		// Example value
+		if($sample === null)
+		{
+			$this->Store($res, 'example', $type->Sample());
+		}
+		else
+		{
+			$this->Store($res, 'example', $sample);
+		}
+
 		// Default value
-		if($default !== null)
+		if($default === null)
+		{
+			$this->Store($res, 'default', $type->Default());
+		}
+		else
 		{
 			$this->Store($res, 'default', $default);
 		}
@@ -472,9 +582,9 @@ class TSwagger extends AThing
 	//------------------------------------------------------------------------------------------------------------------
 	protected function ComponentsDoc() : array
 	{
-		$res = array('schemas' => $this->EntitiesDoc());
+		$res = array('schemas' => $this->RecordsDoc());
 
-		$res['schemas']['ErrorModel'] = array(
+		$res['schemas']['Error'] = array(
 			'type' => 'object',
 			'properties' => array(
 				'error'             => array('type' => 'string'),
@@ -486,15 +596,15 @@ class TSwagger extends AThing
 
 
 	//------------------------------------------------------------------------------------------------------------------
-	// Gets Doc : Entities
+	// Gets Doc : Records
 	//------------------------------------------------------------------------------------------------------------------
-	protected function EntitiesDoc() : array
+	protected function RecordsDoc() : array
 	{
 		$res = array();
 
 		foreach($this->_Components as $v)
 		{
-			$this->Store($res, $v->Name(), $this->EntityDoc($v));
+			$this->Store($res, $v->Name(), $this->RecordDoc($v));
 		}
 
 		return $res;
@@ -502,20 +612,34 @@ class TSwagger extends AThing
 
 
 	//------------------------------------------------------------------------------------------------------------------
-	// Gets Doc : Entity
+	// Gets Doc : Record
 	//------------------------------------------------------------------------------------------------------------------
-	protected function EntityDoc(TTypeEntity $entity) : array
+	protected function RecordDoc(TTypeRecord $record) : array
 	{
 		$res        = array();
 		$properties = array();
+		$required   = array();
+		$sample     = $record->Sample();
 
-		foreach($entity->Properties() as $v)
+		foreach($record->Properties() as $k => $v)
 		{
-			$properties[$v->Name()] = $this->TypeDoc($v->Type(), $v->Default());
+			if($record->IsMandatoryProperty($k))
+			{
+				$required[] = $k;
+			}
+
+			$properties[$k] = $this->TypeDoc($v, $sample[$k]);
 		}
 
-		$this->Store($res, 'type'      , 'object'   , true);
+		$this->Store($res, 'type', 'object', true);
+
+		if(!empty($required))
+		{
+			$this->Store($res, 'required', $required);
+		}
+
 		$this->Store($res, 'properties', $properties);
+
 
 		return $res;
 	}
@@ -596,7 +720,7 @@ class TSwagger extends AThing
 
 
 	//------------------------------------------------------------------------------------------------------------------
-	// Gets Doc : Contat
+	// Gets Doc : Contact
 	//------------------------------------------------------------------------------------------------------------------
 	protected function ContactDoc() : array
 	{

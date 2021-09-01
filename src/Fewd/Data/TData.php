@@ -171,6 +171,30 @@ class TData extends AModule
 
 
 	//------------------------------------------------------------------------------------------------------------------
+	// Gets the default value for a given datatype
+	//------------------------------------------------------------------------------------------------------------------
+	public function DefaultValue(string $datatype) : mixed
+	{
+		switch($datatype)
+		{
+			case self::DATATYPE_ID         : return 0;
+			case self::DATATYPE_CODE       : return '';
+			case self::DATATYPE_FLAG       : return '-';
+			case self::DATATYPE_KIND       : return '';
+			case self::DATATYPE_NUMBER     : return 0;
+			case self::DATATYPE_FLOAT      : return 0;
+			case self::DATATYPE_TEXT       : return '';
+			case self::DATATYPE_MEMO       : return '';
+			case self::DATATYPE_DATETIME   : return '';
+			case self::DATATYPE_MICROTIME  : return '';
+			case self::DATATYPE_SORT       : return '';
+		}
+
+		return '';
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
 	// Converts a value for a given datatype
 	//------------------------------------------------------------------------------------------------------------------
 	public function Convert(mixed $value, string $datatype) : mixed

@@ -8,6 +8,8 @@ namespace Fewd\Core;
 
 
 use Exception;
+use ReflectionFunction;
+
 
 
 class TCore extends AModule
@@ -1199,6 +1201,32 @@ class TCore extends AModule
 	public function EndOfTime() : string
 	{
 		return '99991231235959';
+	}
+
+
+
+
+	//==================================================================================================================
+	//
+	// REFLECTION HELPERS
+	//
+	//==================================================================================================================
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Gets arguments from a function
+	//------------------------------------------------------------------------------------------------------------------
+	public function FunctionArguments(callable $callback) : array
+	{
+		$reflection = new ReflectionFunction($callback);
+
+		$res = array();
+		foreach($reflection->getParameters() as $v)
+		{
+			$res[$v->name] = $v;
+		}
+
+		return $res;
 	}
 
 

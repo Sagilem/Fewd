@@ -7,8 +7,25 @@
 namespace Fewd\Api;
 
 
+use Fewd\Core\TCore;
+
+
 class TTypeBoolean extends AType
 {
+	//------------------------------------------------------------------------------------------------------------------
+	// Constructor
+	//------------------------------------------------------------------------------------------------------------------
+	public function __construct(
+		TCore  $core,
+		TApi   $api,
+		string $name,
+		bool   $sample,
+		bool   $default)
+	{
+		parent::__construct($core, $api, $name, $sample, $default);
+	}
+
+
 	//------------------------------------------------------------------------------------------------------------------
 	// Raw converts a given value to the current type (without any control)
 	//------------------------------------------------------------------------------------------------------------------
@@ -21,9 +38,25 @@ class TTypeBoolean extends AType
 	//------------------------------------------------------------------------------------------------------------------
 	// Checks if a given value complies with the current type (returns an error message if not)
 	//------------------------------------------------------------------------------------------------------------------
-	public function Check(mixed $value) : string
+	public function Check(mixed $value, int $level = self::CHECK_LEVEL_MANDATORY) : string
 	{
 		// Anything can be converted into a boolean value
 		return '';
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Adapts a given value
+	//------------------------------------------------------------------------------------------------------------------
+	public function Adapt(mixed &$value)
+	{
+		if(($value === false) || ($value === '-') || ($value === 'false') || ($value === 'no') || ($value === 'n'))
+		{
+			$value = false;
+		}
+		else
+		{
+			$value = true;
+		}
 	}
 }
