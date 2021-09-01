@@ -362,7 +362,7 @@ class TTracer extends AModule
 	//------------------------------------------------------------------------------------------------------------------
 	// Formats an object for trace
 	//------------------------------------------------------------------------------------------------------------------
-	protected function TraceObject($object, int $indent = 0, array $parents = array()) : string
+	protected function TraceObject(object $object, int $indent = 0, array $parents = array()) : string
 	{
 		// If object was previously traced :
 		// Does not trace it
@@ -392,7 +392,6 @@ class TTracer extends AModule
 			$attributes[$k] = $object->{$k};
 		}
 
-		// Gets accessors
 		try
 		{
 			$reflection = new ReflectionClass($object);

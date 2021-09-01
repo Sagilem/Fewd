@@ -40,9 +40,11 @@ class TTypeString extends AType
 		?int       $minimum,
 		?int       $maximum,
 		string     $pattern,
-		array      $enums)
+		array      $enums,
+		string     $sample,
+		string     $default)
 	{
-		parent::__construct($core, $api, $name);
+		parent::__construct($core, $api, $name, $sample, $default);
 
 		$this->_Minimum      = $minimum;
 		$this->_Maximum      = $maximum;
@@ -134,7 +136,7 @@ class TTypeString extends AType
 	//------------------------------------------------------------------------------------------------------------------
 	// Checks if a given value complies with the current type (returns an error message if not)
 	//------------------------------------------------------------------------------------------------------------------
-	public function Check(mixed $value) : string
+	public function Check(mixed $value, int $level = self::CHECK_LEVEL_MANDATORY) : string
 	{
 		// If value is not a string :
 		// Error

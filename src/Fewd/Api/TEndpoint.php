@@ -44,8 +44,10 @@ class TEndpoint extends AThing
 
 	// Wildcards in path
 	private $_Wildcards;
-	public final function Wildcards()             : array { return $this->_Wildcards;             }
-	public final function HasWildcard(string $id) : bool  { return isset($this->_Wildcards[$id]); }
+	public final function Wildcards()             : array       { return $this->_Wildcards;              }
+	public final function Wildcard(   string $id) : ?AType      { return $this->_Wildcards[$id] ?? null; }
+	public final function HasWildcard(string $id) : bool        { return isset($this->_Wildcards[$id]);  }
+	public final function AddWildcard(string $id, ?AType $type) { $this->_Wildcards[$id] = $type;        }
 
 	// Operations associated to verbs
 	private $_Operations = array();
@@ -87,12 +89,63 @@ class TEndpoint extends AThing
 	{
 		parent::Init();
 
-		$this->_Path         = $this->DefinePath();
 		$this->_Wildcards    = $this->DefineWildcards();
+		$this->_Path         = $this->DefinePath();
 		$this->_Summary      = $this->DefineSummary();
 		$this->_Description  = $this->DefineDescription();
 		$this->_MaximumLimit = $this->DefineMaximumLimit();
 		$this->_MaximumAge   = $this->DefineMaximumAge();
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Define : Wildcards
+	//------------------------------------------------------------------------------------------------------------------
+	protected function DefineWildcards() : array
+	{
+		// Gets path
+		$path = $this->Path();
+
+		$pos = strpos($path, '?');
+		if($pos !== false)
+		{
+			$path = substr($path, 0, $pos);
+		}
+
+		// Gets wildcards from endpoint's path
+		$res     = array();
+		$matches = array();
+
+		$nb = preg_match_all('/([{].*[}])/U', $this->Path(), $matches);
+		if(is_int($nb) && ($nb > 0))
+		{
+			// For each wildcard found :
+			foreach($matches[0] as $v)
+			{
+				// Gets wildcard (without parenthesis)
+				$key = substr($v, 1, -1);
+
+				// Gets type (in case of a wildcard provided with its type)
+				$pos = strpos($key, ':');
+				if($pos === false)
+				{
+					$type = null;
+				}
+				else
+				{
+					$type = substr($key, $pos + 1);
+					$key  = substr($key, 0, $pos);
+
+					$type = $this->Api()->Type($type);
+				}
+
+				// Stores wildcard
+				$res[$key] = $type;
+			}
+		}
+
+		// Result
+		return $res;
 	}
 
 
@@ -111,30 +164,16 @@ class TEndpoint extends AThing
 			$res = substr($res, 0, $pos);
 		}
 
-		// Result
-		return $res;
-	}
-
-
-	//------------------------------------------------------------------------------------------------------------------
-	// Define : Wildcards
-	//------------------------------------------------------------------------------------------------------------------
-	protected function DefineWildcards() : array
-	{
-		// Gets wildcards from endpoint's path
-		$res     = array();
-		$matches = array();
-
-		$nb = preg_match_all('/([{].*[}])/U', $this->Path(), $matches);
-		if(is_int($nb) && ($nb > 0))
+		// Removes types from typed wildcards
+		foreach($this->Wildcards() as $k => $v)
 		{
-			foreach($matches[0] as $v)
+			if($v !== null)
 			{
-				$key       = substr($v, 1, -1);
-				$res[$key] = $key;
+				$res = str_replace('{' . $k . ':' . $v->Name() . '}', '{' . $k . '}', $res);
 			}
 		}
 
+		// Result
 		return $res;
 	}
 

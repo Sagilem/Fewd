@@ -26,10 +26,16 @@ class TOperation extends AThing
 	public final function Verb() : string { return $this->_Verb; }
 
 	// Callback
-	// Args   : TOperation $operation, array $args, array $body, array $sorts, int $startIndex, int $endIndex
-	// Result : any
 	private $_Callback;
 	public final function Callback() : callable { return $this->_Callback; }
+
+	// Body type
+	private $_BodyType;
+	public final function BodyType() : ?AType { return $this->_BodyType; }
+
+	// Successful response type
+	private $_ResponseType;
+	public final function ResponseType() : ?AType { return $this->_ResponseType; }
 
 	// Summary
 	private $_Summary;
@@ -42,10 +48,6 @@ class TOperation extends AThing
 	// Code
 	private $_Code;
 	public final function Code() : string { return $this->_Code; }
-
-	// Successful response type
-	private $_ResponseType;
-	public final function ResponseType() : ?AType { return $this->_ResponseType; }
 
 	// External doc description
 	private $_ExternalDocDescription;
@@ -66,6 +68,9 @@ class TOperation extends AThing
 	public final function HasParameter(string $id) : bool             { return isset($this->_Parameters[$id]);  }
 	public       function AddParameter(string $id, TParameter $value) { $this->_Parameters[$id] = $value;       }
 
+	// Gets partial response info
+	protected $_Partial;
+
 
 	//------------------------------------------------------------------------------------------------------------------
 	// Constructor
@@ -76,10 +81,11 @@ class TOperation extends AThing
 		TEndpoint $endpoint,
 		string    $verb,
 		callable  $callback,
+		AType     $bodyType               = null,
+		AType     $responseType           = null,
 		string    $summary                = '',
 		string    $description            = '',
 		string    $code                   = '',
-		AType     $responseType           = null,
 		string    $externalDocDescription = '',
 		string    $externalDocUrl         = '',
 		bool      $isDeprecated           = false)
@@ -90,10 +96,11 @@ class TOperation extends AThing
 		$this->_Endpoint               = $endpoint;
 		$this->_Verb                   = $verb;
 		$this->_Callback               = $callback;
+		$this->_BodyType               = $bodyType;
+		$this->_ResponseType           = $responseType;
 		$this->_Summary                = $summary;
 		$this->_Description            = $description;
 		$this->_Code                   = $code;
-		$this->_ResponseType           = $responseType;
 		$this->_ExternalDocDescription = $externalDocDescription;
 		$this->_ExternalDocUrl         = $externalDocUrl;
 		$this->_IsDeprecated           = $isDeprecated;
@@ -112,7 +119,6 @@ class TOperation extends AThing
 		$this->_Summary                = $this->DefineSummary();
 		$this->_Description            = $this->DefineDescription();
 		$this->_Code                   = $this->DefineCode();
-		$this->_ResponseType           = $this->DefineResponseType();
 		$this->_ExternalDocDescription = $this->DefineExternalDocDescription();
 		$this->_ExternalDocUrl         = $this->DefineExternalDocUrl();
 		$this->_IsDeprecated           = $this->DefineIsDeprecated();
@@ -251,15 +257,6 @@ class TOperation extends AThing
 
 
 	//------------------------------------------------------------------------------------------------------------------
-	// Define : Reponse type
-	//------------------------------------------------------------------------------------------------------------------
-	protected function DefineResponseType() : ?AType
-	{
-		return $this->ResponseType();
-	}
-
-
-	//------------------------------------------------------------------------------------------------------------------
 	// Define : External doc description
 	//------------------------------------------------------------------------------------------------------------------
 	protected function DefineExternalDocDescription() : string
@@ -296,122 +293,54 @@ class TOperation extends AThing
 
 
 	//------------------------------------------------------------------------------------------------------------------
-	// Checks if all parameters are provided as arguments (returns a potential error message)
+	// Gets a given string argument from a given arguments array, after removing it
 	//------------------------------------------------------------------------------------------------------------------
-	public function CheckParameters(array $args) : string
+	protected function StringArgumentValue(string $arg, array &$args) : string
 	{
-		// For each parameter :
-		foreach($this->Parameters() as $v)
+		$res = '';
+
+		if(isset($args[$arg]))
 		{
-			$name = $v->Name();
+			$res = $args[$arg];
 
-			// Mandatory parameter check
-			if($v->IsMandatory() && !isset($args[$name]))
-			{
-				$res = TApi::ERROR_MANDATORY_PARAMETER;
-				$res = str_replace('{{PARAMETER}}', $name, $res);
-
-				return $res;
-			}
-
-			// Value check
-			if(isset($args[$name]))
-			{
-				$message = $v->Type()->Check($args[$name]);
-
-				if($message !== '')
-				{
-					$res = TApi::ERROR_INCORRECT;
-					$res = str_replace('{{PARAMETER}}', $name   , $res);
-					$res = str_replace('{{MESSAGE}}'  , $message, $res);
-
-					return $res;
-				}
-			}
+			unset($args[$arg]);
 		}
 
-		// No error found
-		return '';
-	}
-
-
-	//------------------------------------------------------------------------------------------------------------------
-	// Checks if a response is correct (returns a potential error message)
-	//------------------------------------------------------------------------------------------------------------------
-	public function CheckResponse(mixed $response) : string
-	{
-		if($this->ResponseType() === null)
-		{
-			return '';
-		}
-
-		return $this->ResponseType()->Check($response);
-	}
-
-
-	//------------------------------------------------------------------------------------------------------------------
-	// Limits a given response to a given subset
-	//------------------------------------------------------------------------------------------------------------------
-	protected function LimitToSubset(mixed $response, string $subset) : mixed
-	{
-		// If response is not an array :
-		// Does nothing
-		if(!is_array($response))
-		{
-			return $response;
-		}
-
-		$res = $response;
-
-		// Splits subset into parts
-		$parts = explode(',', $subset);
-
-		// For each subset part :
-		foreach($parts as $v)
-		{
-			$v = trim($v);
-
-			// Empty parts are ignored
-			if($v === '')
-			{
-				continue;
-			}
-
-			// If part is not found :
-			// Stops here
-			if(!isset($res[$v]))
-			{
-				return null;
-			}
-
-			// Otherwise :
-			// Fits result to the current part
-			$res = $res[$v];
-		}
-
-		// Result
 		return $res;
 	}
 
 
 	//------------------------------------------------------------------------------------------------------------------
-	// Limits a given response to a set of given fields
+	// Gets a given int argument from a given arguments array, after removing it
 	//------------------------------------------------------------------------------------------------------------------
-	protected function LimitToFields(mixed $response, string $fields) : mixed
+	protected function IntArgumentValue(string $arg, array &$args) : string
 	{
-		// If response is not an array :
-		// Does nothing
-		if(!is_array($response))
+		$res = 0;
+
+		if(isset($args[$arg]))
 		{
-			return $response;
+			$res = $args[$arg];
+
+			unset($args[$arg]);
 		}
 
-		$res = array();
+		return $res;
+	}
 
-		// For each field in fields expression :
-		$data = explode(',', $fields);
 
-		foreach($data as $v)
+	//------------------------------------------------------------------------------------------------------------------
+	// Gets the subsets argument
+	//------------------------------------------------------------------------------------------------------------------
+	protected function SubsetsArgument(array &$args) : array
+	{
+		// Gets argument
+		$argument = $this->StringArgumentValue($this->Api()->SubsetsArg(), $args);
+
+		// For each field in argument :
+		$parts = explode(',', $argument);
+		$res   = array();
+
+		foreach($parts as $v)
 		{
 			$v = trim($v);
 
@@ -421,10 +350,85 @@ class TOperation extends AThing
 				continue;
 			}
 
-			// Keeps value for the current field
-			if(isset($response[$v]))
+			// Stores current part
+			$res[$v] = $v;
+		}
+
+		// Result
+		return $res;
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Gets the fields argument
+	//------------------------------------------------------------------------------------------------------------------
+	protected function FieldsArgument(array &$args) : array
+	{
+		// Gets argument
+		$argument = $this->StringArgumentValue($this->Api()->FieldsArg(), $args);
+
+		// For each field in argument :
+		$parts = explode(',', $argument);
+		$res   = array();
+
+		foreach($parts as $v)
+		{
+			$v = trim($v);
+
+			// Empty fields are ignored
+			if($v === '')
 			{
-				$res[$v] = $response[$v];
+				continue;
+			}
+
+			// Stores current part
+			$res[$v] = $v;
+		}
+
+		// Result
+		return $res;
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Gets the sorts argument
+	//------------------------------------------------------------------------------------------------------------------
+	protected function SortsArgument(array &$args) : array
+	{
+		// Gets argument
+		$argument = $this->StringArgumentValue($this->Api()->SortsArg(), $args);
+
+		// Detects sort fields in argument
+		$res   = array();
+		$parts = explode(',', $argument);
+
+		foreach($parts as $v)
+		{
+			$v = trim($v);
+
+			// Empty fields are ignored
+			if(($v === '') || ($v === '-'))
+			{
+				continue;
+			}
+
+			// If descending order symbol has been put at end of field name :
+			// Putts it at the beginning
+			if(substr($v, -1) === '-')
+			{
+				$v = '-' . substr($v, 0, -1);
+			}
+
+			// Descending order case
+			if(substr($v, 0, 1) === '-')
+			{
+				$res[$v] = substr($v, 1);
+			}
+
+			// Ascending order case
+			else
+			{
+				$res[$v] = $v;
 			}
 		}
 
@@ -434,194 +438,38 @@ class TOperation extends AThing
 
 
 	//------------------------------------------------------------------------------------------------------------------
-	// Limits a given response to a set of given filters
+	// Gets the offset argument
 	//------------------------------------------------------------------------------------------------------------------
-	protected function LimitToFilters(mixed $response, array $filters) : mixed
+	protected function OffsetArgument(array &$args) : int
 	{
-		// If no filter provided :
-		// Does nothing
-		if(empty($filters))
+		return max($this->IntArgumentValue($this->Api()->OffsetArg(), $args), 0);
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Gets the limit argument
+	//------------------------------------------------------------------------------------------------------------------
+	protected function LimitArgument(array &$args) : int
+	{
+		$res = $this->IntArgumentValue($this->Api()->LimitArg(), $args);
+		if(($this->Endpoint()->MaximumLimit() > 0) && ($res > $this->Endpoint()->MaximumLimit()))
 		{
-			return $response;
+			$res = $this->Endpoint()->MaximumLimit();
 		}
 
-		// If response is not an array :
-		// Does nothing
-		if(!is_array($response))
+		if($res < 0)
 		{
-			return $response;
+			$res = 0;
 		}
 
-		$res = array();
-
-		// For each record in response :
-		// Checks if it matches to filters
-		foreach($response as $k => $v)
-		{
-			if(!is_array($v) || $this->CheckFilters($v, $filters))
-			{
-				$res[$k] = $v;
-			}
-		}
-
-		// Result
 		return $res;
 	}
 
 
 	//------------------------------------------------------------------------------------------------------------------
-	// Checks if a record fits with some filters
+	// Transforms arguments into filters (aka conditions)
 	//------------------------------------------------------------------------------------------------------------------
-	protected function CheckFilters(array $record, array $filters) : bool
-	{
-		foreach($filters as $k => $v)
-		{
-			// Two-characters operator provided
-			$operator = substr($k, -2);
-
-			if(($operator === '!~') ||
-			   ($operator === '!=') ||
-			   ($operator === '>=') ||
-			   ($operator === '<='))
-			{
-				if(!$this->CheckFilter($record, $operator, substr($k, 0, -2), $v))
-				{
-					return false;
-				}
-
-				continue;
-			}
-
-			// One-character operator provided
-			$operator = substr($k, -1);
-
-			if(($operator === '~') ||
-			   ($operator === '=') ||
-			   ($operator === '>') ||
-			   ($operator === '<'))
-			{
-				if(!$this->CheckFilter($record, $operator, substr($k, 0, -1), $v))
-				{
-					return false;
-				}
-
-				continue;
-			}
-
-			// No operator provided
-			if(!$this->CheckFilter($record, '=', $k, $v))
-			{
-				return false;
-			}
-		}
-
-		// Everything OK
-		return true;
-	}
-
-
-	//------------------------------------------------------------------------------------------------------------------
-	// Checks if a record fits with a given filter
-	//------------------------------------------------------------------------------------------------------------------
-	protected function CheckFilter(mixed $record, string $operator, string $key, string $value) : bool
-	{
-		// If key is empty :
-		// Compares record and value
-		$key = trim($key);
-		if($key === '')
-		{
-			// Array cannot be compared
-			if(is_array($record))
-			{
-				return false;
-			}
-
-			// If record is a number :
-			// Transforms it to a string with a prefix to help comparison
-			if(is_numeric($record))
-			{
-				$record = str_pad(strval($record), 30);
-				$value  = str_pad(strval($value ), 30);
-			}
-
-			// Standard operators
-			if($operator === '=' ) { return ($record == $value); }
-			if($operator === '==') { return ($record != $value); }
-			if($operator === '>' ) { return ($record >  $value); }
-			if($operator === '>=') { return ($record >= $value); }
-			if($operator === '<' ) { return ($record <  $value); }
-			if($operator === '<=') { return ($record <= $value); }
-
-			// Wildcard operators
-			if(($operator === '~') || ($operator === '!~'))
-			{
-				$pattern  = '/' . str_replace('*', '.*', $value) . '/U';
-				$is_match = preg_match($pattern, $record);
-
-				if($operator === '~')
-				{
-					return $is_match;
-				}
-
-				return !$is_match;
-			}
-
-			// Unknown operator
-			return true;
-		}
-
-		// Otherwise :
-		// Gets first part from key
-		$pos = strpos($key, ',');
-
-		if($pos === false)
-		{
-			$first = trim($key);
-			$rest  = '';
-		}
-		else
-		{
-			$first = trim(substr($key, 0, $pos));
-			$rest  = substr($key, $pos + 1);
-		}
-
-		// If first part from key is a joker :
-		// Iterates until the first case that matches
-		if($first === '*')
-		{
-			if(!is_array($record))
-			{
-				return false;
-			}
-
-			foreach($record as $v)
-			{
-				if($this->CheckFilter($v, $operator, $rest, $value))
-				{
-					return true;
-				}
-			}
-
-			return false;
-		}
-
-		// If first part from key is not found :
-		// It does not match
-		if(!isset($record[$first]))
-		{
-			return false;
-		}
-
-		// Otherwise :
-		// Recursive call
-		return $this->CheckFilter($record[$first], $operator, $rest, $value);
-	}
-
-
-	//------------------------------------------------------------------------------------------------------------------
-	// Transforms arguments into ready-to-use filters (aka conditions) for the Fewd/Data module
-	//------------------------------------------------------------------------------------------------------------------
-	protected function Filters(array $args) : array
+	protected function ArgumentsToFilters(array $args) : array
 	{
 		$res = array();
 
@@ -674,33 +522,29 @@ class TOperation extends AThing
 
 
 	//------------------------------------------------------------------------------------------------------------------
-	// Prepares a sort fields array from a given sort string (ex : 'key,subkey,subsubkey')
+	// Prepares a default set of values for POST, PUT, PATCH
 	//------------------------------------------------------------------------------------------------------------------
-	protected function SortFields(string $sortString) : array
+	public function DefaultBody() : mixed
+	{
+		if($this->BodyType() !== null)
+		{
+			return $this->BodyType()->Default();
+		}
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Filters a collection according to some filters
+	//------------------------------------------------------------------------------------------------------------------
+	protected function FilterCollection(array $collection, array $filters) : array
 	{
 		$res = array();
 
-		if($sortString !== '')
+		foreach($collection as $v)
 		{
-			$parts = explode(',', $sortString);
-
-			foreach($parts as $v)
+			if(is_array($v) && $this->MatchesRecordWithFilters($v, $filters))
 			{
-				$v = trim($v);
-
-				if(($v === '') || ($v === '-'))
-				{
-					continue;
-				}
-
-				if(substr($v, 0, 1) === '-')
-				{
-					$res[$v] = substr($v, 1);
-				}
-				else
-				{
-					$res[$v] = $v;
-				}
+				$res[] = $v;
 			}
 		}
 
@@ -709,38 +553,186 @@ class TOperation extends AThing
 
 
 	//------------------------------------------------------------------------------------------------------------------
-	// Sorts response into ascending order
+	// Checks if a given record fits with some filters
 	//------------------------------------------------------------------------------------------------------------------
-	public function Sort(mixed $response, array $sorts) : mixed
+	protected function MatchesRecordWithFilters(mixed $record, array $filters) : bool
 	{
-		// If no sort provided :
-		// Does nothing
-		if(empty($sorts))
+		foreach($filters as $k => $v)
 		{
-			return $response;
+			// Two-characters operator provided
+			$operator = substr($k, -2);
+
+			if(($operator === '!~') ||
+			   ($operator === '!=') ||
+			   ($operator === '>=') ||
+			   ($operator === '<='))
+			{
+				if(!$this->MatchesRecordWithFilter($record, $operator, substr($k, 0, -2), $v))
+				{
+					return false;
+				}
+
+				continue;
+			}
+
+			// One-character operator provided
+			$operator = substr($k, -1);
+
+			if(($operator === '~') ||
+			   ($operator === '=') ||
+			   ($operator === '>') ||
+			   ($operator === '<'))
+			{
+				if(!$this->MatchesRecordWithFilter($record, $operator, substr($k, 0, -1), $v))
+				{
+					return false;
+				}
+
+				continue;
+			}
+
+			// No operator provided
+			if(!$this->MatchesRecordWithFilter($record, '=', $k, $v))
+			{
+				return false;
+			}
 		}
 
-		// If response is not a collection :
-		// Does nothing
-		if(!$this->Api()->IsCollectionResponse($response))
+		// Everything OK
+		return true;
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Checks if a given record fits with a given filter
+	//------------------------------------------------------------------------------------------------------------------
+	protected function MatchesRecordWithFilter(mixed $record, string $operator, string $key, string $value) : bool
+	{
+		// If record is not an array :
+		// It cannot match
+		if(!is_array($record))
 		{
-			return $response;
+			return false;
 		}
 
-		// Sorts array
-		usort($response, function(mixed $a, mixed $b) use ($sorts) : int
+		// Key can be a path (for instance : "item,subitem,id")
+		$rest = '';
+		$pos  = strpos($key, ',');
+
+		if($pos !== false)
+		{
+			$rest = substr($key, $pos + 1);
+			$key  = substr($key, 0, $pos);
+		}
+
+		// If key does not exist :
+		// Record fits by default
+		if(!isset($record[$key]))
+		{
+			return true;
+		}
+
+		$data = $record[$key];
+
+		// If key was a path :
+		// Recursive call
+		if($rest !== '')
+		{
+			if(is_array($data))
+			{
+				return $this->MatchesRecordWithFilter($data, $operator, $rest, $value);
+			}
+
+			return true;
+		}
+
+		// Otherwise :
+		// Formats value to be compared with data
+		if(is_int($data))
+		{
+			$value = intval($data);
+		}
+		elseif(is_float($data))
+		{
+			$value = floatval($data);
+		}
+		elseif(is_bool($data))
+		{
+			if(($value === false) || ($value === '-') || ($value === 'false') || ($value === 'no') || ($value === 'n'))
+			{
+				$value = false;
+			}
+			else
+			{
+				$value = true;
+			}
+		}
+		elseif(!is_string($data))
+		{
+			return false;
+		}
+
+		// Standard operators
+		if($operator === '=' ) { return ($data == $value); }
+		if($operator === '!=') { return ($data != $value); }
+		if($operator === '>' ) { return ($data >  $value); }
+		if($operator === '>=') { return ($data >= $value); }
+		if($operator === '<' ) { return ($data <  $value); }
+		if($operator === '<=') { return ($data <= $value); }
+
+		// Wildcard operators are only available with strings
+		if((($operator === '~') || ($operator === '!~')) && is_string($value))
+		{
+			$pattern  = '/' . str_replace('*', '.*', $value) . '/U';
+			$is_match = preg_match($pattern, $data);
+
+			if($operator === '~')
+			{
+				return $is_match;
+			}
+
+			return !$is_match;
+		}
+
+		// Unknown operator :
+		// Record does not match
+		return false;
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Sorts response
+	//------------------------------------------------------------------------------------------------------------------
+	protected function SortCollection(array &$collection, array $sorts)
+	{
+		// Prepares sorts
+		$tb = array();
+		foreach($sorts as $k => $v)
+		{
+			$factor = 1;
+
+			if(substr($k, -1) === '-')
+			{
+				$k      = substr($k, 0, -1);
+				$factor = -1;
+			}
+			elseif(substr($k, 0, 1) === '-')
+			{
+				$k      = substr($k, 1);
+				$factor = -1;
+			}
+
+			$tb[$k] = $factor;
+		}
+
+		$sorts = $tb;
+
+		// Sorts data
+		usort($collection, function(mixed $a, mixed $b) use ($sorts) : int
 		{
 			// For each sort field :
 			foreach($sorts as $k => $v)
 			{
-				$factor = 1;
-
-				if(substr($k, 0, 1) === '-')
-				{
-					$k      = substr($k, 1);
-					$factor = -1;
-				}
-
 				// Sort fields that are not present in response are ignored
 				if(!isset($a[$k]) || !isset($b[$k]))
 				{
@@ -751,99 +743,617 @@ class TOperation extends AThing
 				// Goes on with next record
 				if($a[$k] < $b[$k])
 				{
-					return -$factor;
+					return -$v;
 				}
 				elseif($a[$k] > $b[$k])
 				{
-					return $factor;
+					return $v;
+				}
+			}
+		});
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Limits a collection response to subsets
+	//------------------------------------------------------------------------------------------------------------------
+	protected function LimitCollectionToSubsets(array &$collection, array $subsets)
+	{
+		foreach($collection as &$v)
+		{
+			$this->LimitRecordToSubsets($v, $subsets);
+		}
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Limits a record to subsets
+	//------------------------------------------------------------------------------------------------------------------
+	protected function LimitRecordToSubsets(mixed &$record, array $subsets)
+	{
+		foreach($subsets as $k => $v)
+		{
+			if(isset($record[$k]))
+			{
+				$record = $record[$k];
+			}
+			else
+			{
+				$record = null;
+
+				return;
+			}
+		}
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Limits a collection response to fields
+	//------------------------------------------------------------------------------------------------------------------
+	protected function LimitCollectionToFields(array &$collection, array $fields)
+	{
+		foreach($collection as &$v)
+		{
+			$this->LimitRecordToFields($v, $fields);
+		}
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Limits a record to fields
+	//------------------------------------------------------------------------------------------------------------------
+	protected function LimitRecordToFields(mixed &$record, array $fields)
+	{
+		if(is_array($record))
+		{
+			$res = array();
+
+			foreach($fields as $k => $v)
+			{
+				if(isset($record[$k]))
+				{
+					$res[$k] = $record[$k];
 				}
 			}
 
-			// Result
-			return 0;
-		});
+			$record = $res;
+		}
+		else
+		{
+			$record = null;
+		}
+	}
 
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Adapts endpoint wildcards
+	//------------------------------------------------------------------------------------------------------------------
+	protected function AdaptWildcards(array &$args)
+	{
+		// For each wildcard :
+		foreach($this->Endpoint()->Wildcards() as $k => $v)
+		{
+			if($v === null)
+			{
+				continue;
+			}
+
+			// If wildcard value was not declared :
+			// Applies the wildcard default value
+			if(!isset($args[$k]))
+			{
+				$args[$k] = $v->Default();
+			}
+
+			// Adapts wildcard
+			$v->Adapt($args[$k]);
+		}
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Checks if all endpoint wildcards are provided as arguments
+	//------------------------------------------------------------------------------------------------------------------
+	protected function CheckWildcards(array &$args)
+	{
+		// For each wildcard :
+		foreach($this->Endpoint()->Wildcards() as $k => $v)
+		{
+			if($v === null)
+			{
+				continue;
+			}
+
+			// Mandatory parameter check
+			if(!isset($args[$k]))
+			{
+				$description = str_replace('{{PARAMETER}}', $k, TApi::ERROR_MANDATORY_PARAMETER);
+
+				$this->ExitError(TApi::ERROR_PARAMETERS, $description);
+			}
+
+			// Value check
+			if(isset($args[$k]))
+			{
+				$message = $v->Check($args[$k], AType::CHECK_LEVEL_MANDATORY);
+
+				if($message !== '')
+				{
+					$description = str_replace('{{PARAMETER}}', $k      , TApi::ERROR_INCORRECT);
+					$description = str_replace('{{MESSAGE}}'  , $message, $description);
+
+					$this->ExitError(TApi::ERROR_PARAMETERS, $description);
+				}
+			}
+		}
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Adapts parameter values
+	//------------------------------------------------------------------------------------------------------------------
+	protected function AdaptParameters(array &$args)
+	{
+		// For each parameter :
+		foreach($this->Parameters() as $k => $v)
+		{
+			// If parameter value was not declared :
+			// Applies the parameter default value
+			if(!isset($args[$k]))
+			{
+				$args[$k] = $v->Default();
+			}
+
+			// Adapts parameter
+			$v->Type()->Adapt($args[$k]);
+		}
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Checks if all parameters are provided as arguments
+	//------------------------------------------------------------------------------------------------------------------
+	protected function CheckParameters(array &$args)
+	{
+		// For each parameter :
+		foreach($this->Parameters() as $v)
+		{
+			$name = $v->Name();
+
+			// Mandatory parameter check
+			if($v->IsMandatory() && !isset($args[$name]))
+			{
+				$description = str_replace('{{PARAMETER}}', $name, TApi::ERROR_MANDATORY_PARAMETER);
+
+				$this->ExitError(TApi::ERROR_PARAMETERS, $description);
+			}
+
+			// Value check
+			if(isset($args[$name]))
+			{
+				$message = $v->Type()->Check($args[$name], AType::CHECK_LEVEL_MANDATORY);
+
+				if($message !== '')
+				{
+					$description = str_replace('{{PARAMETER}}', $name   , TApi::ERROR_INCORRECT);
+					$description = str_replace('{{MESSAGE}}'  , $message, $description);
+
+					$this->ExitError(TApi::ERROR_PARAMETERS, $description);
+				}
+			}
+		}
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Indicates the body check level
+	//------------------------------------------------------------------------------------------------------------------
+	protected function BodyCheckLevel() : int
+	{
+		return AType::CHECK_LEVEL_MANDATORY;
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Checks if a given response is correct
+	//------------------------------------------------------------------------------------------------------------------
+	protected function CheckBody(mixed $body)
+	{
+
+		if($this->BodyType() === null)
+		{
+			return;
+		}
+
+		$level = AType::CHECK_LEVEL_MANDATORY;
+
+		if($this->Verb() === 'PATCH')
+		{
+			$level = AType::CHECK_LEVEL_NONE;
+		}
+
+		$description = $this->BodyType()->Check($body, $level);
+
+		if($description !== '')
+		{
+			$this->ExitError(TApi::ERROR_BODY, $description);
+		}
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Adapts response
+	//------------------------------------------------------------------------------------------------------------------
+	protected function AdaptResponse(mixed &$response)
+	{
+		if($this->ResponseType() !== null)
+		{
+			$this->ResponseType()->Adapt($response);
+		}
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Exists because expected resource was not found
+	//------------------------------------------------------------------------------------------------------------------
+	public function ExitNotFound()
+	{
+		$this->Api()->Exit404($this->Endpoint());
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Exists because a conflict exists
+	//------------------------------------------------------------------------------------------------------------------
+	public function ExitConflict()
+	{
+		$this->Api()->Exit409($this->Endpoint());
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Exits with an error
+	//------------------------------------------------------------------------------------------------------------------
+	public function ExitError(string $message = '', string $description = '', string $url = '')
+	{
+		$this->Api()->Exit400($this->Endpoint(), $message, $description, $url);
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Response for a GETALL
+	//------------------------------------------------------------------------------------------------------------------
+	protected function ResponseGetall(array $args) : array
+	{
+		// Gets special arguments
+		$subsets = $this->SubsetsArgument($args);
+		$fields  = $this->FieldsArgument( $args);
+		$sorts   = $this->SortsArgument(  $args);
+		$offset  = $this->OffsetArgument( $args);
+		$limit   = $this->LimitArgument(  $args);
+
+		// If an offset was provided through special arguments, but no limit :
+		// Limit is automatically set to 1
+		if(($offset > 0) && ($limit === 0))
+		{
+			$limit = 1;
+		}
+
+		// Converts other arguments into filters
+		$args = $this->ArgumentsToFilters($args);
+
+		// Calls the callback
+		$res = call_user_func(
+			$this->Callback(),
+			$this,
+			$args,
+			array(),
+			$subsets,
+			$fields,
+			$sorts,
+			$offset,
+			$limit);
+
+		// Response must be an array
+		if(!is_array($res))
+		{
+			$this->ExitError(TApi::ERROR_COLLECTION_RESPONSE);
+		}
+
+		// If a partial response was delivered :
+		// Checks if it is not, in fact, a complete response
+		$this->_Partial = array();
+
+		if($this->Api()->IsPartialResponse($res))
+		{
+			$totalCount = $this->Api()->PartialTotalCount($res);
+			$res        = $this->Api()->PartialData(      $res);
+
+			if(($offset > 0) || (count($res) < $totalCount))
+			{
+				$this->_Partial['limit'     ] = $limit;
+				$this->_Partial['offset'    ] = $offset;
+				$this->_Partial['totalCount'] = $totalCount;
+			}
+		}
+
+		// If a complete response was delivered :
+		// Checks if it is not, in fact, a partial response
+		elseif(($limit > 0) && (($offset > 0) || (count($res) >= $limit)))
+		{
+			$this->_Partial['limit'     ] = $limit;
+			$this->_Partial['offset'    ] = $offset;
+			$this->_Partial['totalCount'] = 0;
+
+			$res = array_slice($res, 0, $limit);
+		}
+
+		// Gets arguments from callback
+		$callbackArguments = $this->Core()->FunctionArguments($this->Callback());
+
+		// If callback did not manage a "filters" argument :
+		// Response has not been filtered => does it now
+		if(!empty($args) && !isset($callbackArguments['filters']))
+		{
+			$this->FilterCollection($res, $args);
+		}
+
+		// If callback did not manage a "subsets" argument :
+		// Response has not been limited to subsets => does it now
+		if(!empty($subsets) && !isset($callbackArguments['subsets']))
+		{
+			$this->LimitCollectionToSubsets($res, $subsets);
+		}
+
+		// If callback did not manage a "fields" argument :
+		// Response has not been limited to fields => does it now
+		if(!empty($fields) && !isset($callbackArguments['fields']))
+		{
+			$this->LimitCollectionToFields($res, $fields);
+		}
+
+		// If callback did not manage a "sorts" argument :
+		// Response has not been sorted => does it now
+		if(!empty($sorts) && !isset($callbackArguments['sorts']))
+		{
+			$this->SortCollection($res, $sorts);
+		}
+
+		// Ensures that result is not indexed
+		// (can be a bug : must json encode as a collection, not an object)
+		$res = array_values($res);
 
 		// Result
-		return $response;
+		return $res;
 	}
 
 
 	//------------------------------------------------------------------------------------------------------------------
-	// Raw endpoint response
+	// Response for a GET
 	//------------------------------------------------------------------------------------------------------------------
-	protected function RawResponse(
-		callable $callback,
-		array    $args,
-		array    $body,
-		array    $sorts,
-		int      $offset,
-		int      $limit) : mixed
+	protected function ResponseGet(array $args) : mixed
 	{
-		return call_user_func($callback, $this, $args, $body, $sorts, $offset, $limit);
-	}
+		// Gets special arguments
+		$subsets = $this->SubsetsArgument($args);
+		$fields  = $this->FieldsArgument( $args);
 
+		// Converts other arguments into filters
+		$args = $this->ArgumentsToFilters($args);
 
-	//------------------------------------------------------------------------------------------------------------------
-	// Endpoint response
-	//------------------------------------------------------------------------------------------------------------------
-	public function Response(
-		array  $args,
-		array  $body,
-		string $subset,
-		string $fields,
-		string $sort,
-		int    $offset,
-		int    $limit) : mixed
-	{
-		// Prepares sorts
-		$sorts = $this->SortFields($sort);
+		// Calls the callback
+		$res = call_user_func(
+			$this->Callback(),
+			$this,
+			$args,
+			array(),
+			$subsets,
+			$fields);
 
-		// Converts arguments into filters
-		$args = $this->Filters($args);
+		// Gets arguments from callback
+		$callbackArguments = $this->Core()->FunctionArguments($this->Callback());
 
-		// Gets response
-		$res = $this->RawResponse($this->Callback(), $args, $body, $sorts, $offset, $limit);
-
-		// A null, callable or resource response is directly returned as "null"
-		if(($res === null) || is_callable($res) || is_resource($res))
+		// If callback did not manage a "subsets" argument :
+		// Response has not been limited to subsets => does it now
+		if(!empty($subsets) && !isset($callbackArguments['subsets']))
 		{
-			return null;
+			$this->LimitRecordToSubsets($res, $subsets);
 		}
 
-		// An object response is converted into an array
-		if(is_object($res))
+		// If callback did not manage a "fields" argument :
+		// Response has not been limited to fields => does it now
+		if(!empty($fields) && !isset($callbackArguments['fields']))
 		{
-			$res = $this->Core()->ObjectToArray($res);
-		}
-
-		// If verb is GET :
-		if($this->Verb() === 'GET')
-		{
-			// Limits response to a subset
-			if($subset !== '')
-			{
-				$res = $this->LimitToSubset($res, $subset);
-			}
-
-			// Limits response to a set of fields
-			if($fields !== '')
-			{
-				$res = $this->LimitToFields($res, $fields);
-			}
-		}
-
-		// If verb is GETALL :
-		elseif($this->Verb() === 'GETALL')
-		{
-			// Ensures that data is sorted
-			$res = $this->Sort($res, $sorts);
-
-			// Limits response to a set of filters
-			$res = $this->LimitToFilters($res, $args);
+			$this->LimitRecordToFields($res, $fields);
 		}
 
 		// Result
 		return $res;
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Response for a POST
+	//------------------------------------------------------------------------------------------------------------------
+	protected function ResponsePost(array $args, array $body) : mixed
+	{
+		// Calls the callback
+		$res = call_user_func(
+			$this->Callback(),
+			$this,
+			$args,
+			$body);
+
+		// A POST usually returns the inserted id
+		if((is_string($res) && ($res !== '')) || is_int($res))
+		{
+			return $res;
+		}
+
+		return array();
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Response for a PUT
+	//------------------------------------------------------------------------------------------------------------------
+	protected function ResponsePut(array $args, array $body) : mixed
+	{
+		// Adds default values to fields that were not provided in body
+		$defaultBody = array();
+
+		if($this->BodyType() !== null)
+		{
+			$defaultBody = $this->BodyType()->Default();
+		}
+		else
+		{
+			$defaultBody = array();
+		}
+
+		foreach($body as $k => $v)
+		{
+			$defaultBody[$k] = $v;
+		}
+
+		$body = $defaultBody;
+
+		// Calls the callback
+		$res = call_user_func(
+			$this->Callback(),
+			$this,
+			$args,
+			$body);
+
+		// A PUT usually returns the number of affected rows
+		if(is_int($res))
+		{
+			return $res;
+		}
+
+		return 0;
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Response for a PATCH
+	//------------------------------------------------------------------------------------------------------------------
+	protected function ResponsePatch(array $args, array $body) : mixed
+	{
+		// Calls the callback
+		$res = call_user_func(
+			$this->Callback(),
+			$this,
+			$args,
+			$body);
+
+		// A PATCH usually returns the number of affected rows
+		if(is_int($res))
+		{
+			return $res;
+		}
+
+		return 0;
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Response for a DELETE
+	//------------------------------------------------------------------------------------------------------------------
+	protected function ResponseDelete(array $args, array $body) : mixed
+	{
+		// Calls the callback
+		$res = call_user_func(
+			$this->Callback(),
+			$this,
+			$args,
+			$body);
+
+		// A DELETE usually returns the number of affected rows
+		if(is_int($res))
+		{
+			return $res;
+		}
+
+		return 0;
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Response
+	//------------------------------------------------------------------------------------------------------------------
+	protected function Response(array $args, mixed $body) : mixed
+	{
+		// Depending on verb :
+		switch($this->Verb())
+		{
+			case 'GETALL' : return $this->ResponseGetall($args);
+			case 'GET'    : return $this->ResponseGet(   $args);
+			case 'POST'   : return $this->ResponsePost(  $args, $body);
+			case 'PUT'    : return $this->ResponsePut(   $args, $body);
+			case 'PATCH'  : return $this->ResponsePatch( $args, $body);
+			case 'DELETE' : return $this->ResponseDelete($args, $body);
+		}
+
+		// Default case
+		return call_user_func($this->Callback(), $this, $args, $body);
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Output
+	//------------------------------------------------------------------------------------------------------------------
+	protected function Output(mixed $response)
+	{
+		// POST case
+		if($this->Verb() === 'POST')
+		{
+			$id = (is_string($response) || is_int($response)) ? $response : '';
+
+			$this->Api()->Exit201($this->Endpoint(), $id);
+		}
+
+		// GETALL partial case
+		if(!empty($this->_Partial))
+		{
+			$offset     = $this->_Partial['offset'    ];
+			$limit      = $this->_Partial['limit'     ];
+			$totalCount = $this->_Partial['totalCount'];
+
+			$this->Api()->Exit206($this->Endpoint(), $response, $offset, $limit, $totalCount);
+		}
+
+		// Default case
+		$this->Api()->Exit200($this->Endpoint(), $response);
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Run
+	//------------------------------------------------------------------------------------------------------------------
+	public function Run(array $args, mixed $body)
+	{
+		// Adapts wildcards
+		$this->AdaptWildcards($args);
+
+		// Checks wildcards
+		$this->CheckWildcards($args);
+
+		// Adapts parameters
+		$this->AdaptParameters($args);
+
+		// Checks parameters
+		$this->CheckParameters($args);
+
+		// Checks body
+		$this->CheckBody($body);
+
+		// Gets response
+		$response = $this->Response($args, $body);
+
+		// Adapts response
+		$this->AdaptResponse($response);
+
+		// Outputs response
+		$this->Output($response);
 	}
 }

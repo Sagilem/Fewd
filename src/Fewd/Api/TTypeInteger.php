@@ -35,9 +35,11 @@ class TTypeInteger extends AType
 		string     $name,
 		?int       $minimum,
 		?int       $maximum,
-		array      $enums)
+		array      $enums,
+		int        $sample,
+		int        $default)
 	{
-		parent::__construct($core, $api, $name);
+		parent::__construct($core, $api, $name, $sample, $default);
 
 		$this->_Minimum      = $minimum;
 		$this->_Maximum      = $maximum;
@@ -50,11 +52,11 @@ class TTypeInteger extends AType
 	//------------------------------------------------------------------------------------------------------------------
 	public function Init()
 	{
-		parent::Init();
-
 		$this->_Minimum  = $this->DefineMinimum();
 		$this->_Maximum  = $this->DefineMaximum();
 		$this->_Enums    = $this->DefineEnums();
+
+		parent::Init();
 	}
 
 
@@ -102,6 +104,48 @@ class TTypeInteger extends AType
 
 
 	//------------------------------------------------------------------------------------------------------------------
+	// Define : Sample
+	//------------------------------------------------------------------------------------------------------------------
+	protected function DefineSample() : mixed
+	{
+		$res = parent::DefineSample();
+
+		if(($this->Minimum() !== null) && ($res < $this->Minimum()))
+		{
+			$res = $this->Minimum();
+		}
+
+		if(($this->Maximum() !== null) && ($res > $this->Maximum()))
+		{
+			$res = $this->Maximum();
+		}
+
+		return $res;
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Define : Default
+	//------------------------------------------------------------------------------------------------------------------
+	protected function DefineDefault() : mixed
+	{
+		$res = parent::DefineDefault();
+
+		if(($this->Minimum() !== null) && ($res < $this->Minimum()))
+		{
+			$res = $this->Minimum();
+		}
+
+		if(($this->Maximum() !== null) && ($res > $this->Maximum()))
+		{
+			$res = $this->Maximum();
+		}
+
+		return $res;
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
 	// Raw converts a given value to the current type (without any control)
 	//------------------------------------------------------------------------------------------------------------------
 	protected function RawConvert(mixed $value) : mixed
@@ -113,7 +157,7 @@ class TTypeInteger extends AType
 	//------------------------------------------------------------------------------------------------------------------
 	// Checks if a given value complies with the current type (returns an error message if not)
 	//------------------------------------------------------------------------------------------------------------------
-	public function Check(mixed $value) : string
+	public function Check(mixed $value, int $level = self::CHECK_LEVEL_MANDATORY) : string
 	{
 		// If value is not numeric :
 		// Error

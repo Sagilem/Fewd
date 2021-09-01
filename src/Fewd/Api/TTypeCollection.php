@@ -24,9 +24,11 @@ class TTypeCollection extends AType
 		TCore   $core,
 		TApi    $api,
 		string  $name,
-		?AType  $itemsType)
+		?AType  $itemsType,
+		array   $sample,
+		array   $default)
 	{
-		parent::__construct($core, $api, $name);
+		parent::__construct($core, $api, $name, $sample, $default);
 
 		$this->_ItemsType = $itemsType;
 	}
@@ -37,9 +39,25 @@ class TTypeCollection extends AType
 	//------------------------------------------------------------------------------------------------------------------
 	public function Init()
 	{
-		parent::Init();
-
 		$this->_ItemsType = $this->DefineItemsType();
+
+		parent::Init();
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Define : Sample
+	//------------------------------------------------------------------------------------------------------------------
+	protected function DefineSample() : mixed
+	{
+		$res = $this->Sample();
+
+		if(empty($res) && ($this->ItemsType() !== null))
+		{
+			$res = array($this->ItemsType()->Sample());
+		}
+
+		return $res;
 	}
 
 
@@ -55,7 +73,7 @@ class TTypeCollection extends AType
 	//------------------------------------------------------------------------------------------------------------------
 	// Checks if a given value complies with the current type (returns an error message if not)
 	//------------------------------------------------------------------------------------------------------------------
-	public function Check(mixed $value) : string
+	public function Check(mixed $value, int $level = self::CHECK_LEVEL_MANDATORY) : string
 	{
 		// If value is not an array :
 		// Error
@@ -69,7 +87,7 @@ class TTypeCollection extends AType
 		{
 			foreach($value as $v)
 			{
-				if(!$this->ItemsType()->IsValid($v))
+				if(!$this->ItemsType()->IsValid($v, $level))
 				{
 					$res = TApi::ERROR_COLLECTION_TYPE;
 					$res = str_replace('{{TYPE}}', $this->ItemsType()->Name(), $res);
@@ -81,5 +99,20 @@ class TTypeCollection extends AType
 
 		// OK result
 		return '';
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Adapts a given value
+	//------------------------------------------------------------------------------------------------------------------
+	public function Adapt(mixed &$value)
+	{
+		if(is_array($value) && ($this->ItemsType() !== null))
+		{
+			foreach($value as &$v)
+			{
+				$this->ItemsType()->Adapt($v);
+			}
+		}
 	}
 }

@@ -54,16 +54,4 @@ class TDelete extends AConditionSql
 		// Result
 		return $query;
 	}
-
-
-	//------------------------------------------------------------------------------------------------------------------
-	// Runs the query
-	//------------------------------------------------------------------------------------------------------------------
-	public function Run() : array|string
-	{
-		$bindings = array();
-		$query    = $this->Query($bindings, '');
-
-		return $this->Database()->Run($query, $bindings);
-	}
 }

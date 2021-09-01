@@ -15,22 +15,24 @@ use Fewd\Router\TRouter;
 class TApi extends AModule
 {
 	// Error constants
-	public const ERROR_MANDATORY_PARAMETER = 'Mandatory parameter \'{{PARAMETER}}\' is missing.';
-	public const ERROR_MANDATORY_PROPERTY  = 'Mandatory property \'{{PROPERTY}}\' is missing.';
+	public const ERROR_MANDATORY_PARAMETER = 'Mandatory parameter \'{{PARAMETER}}\' is missing';
+	public const ERROR_MANDATORY_PROPERTY  = 'Mandatory property \'{{PROPERTY}}\' is missing';
+	public const ERROR_PROPERTY            = 'Property \'{{PROPERTY}}\' is missing';
 	public const ERROR_INCORRECT           = 'Incorrect value for parameter \'{{PARAMETER}}\' : {{MESSAGE}}';
-	public const ERROR_PARAMETERS          = 'Wrong parameters.';
-	public const ERROR_RESPONSE            = 'Wrong \'{{TYPE}}\' response.';
-	public const ERROR_NUMERIC             = 'value must be numeric.';
-	public const ERROR_MINIMUM             = 'value {{VALUE}} is out of range (lesser than {{MINIMUM}}).';
-	public const ERROR_MAXIMUM             = 'value {{VALUE}} is out of range (greater than {{MAXIMUM}}).';
-	public const ERROR_ENUMS               = 'value {{VALUE}} does not belong to enumerated values ({{ENUMS}}).';
-	public const ERROR_STRING              = 'value must be a string (or a numeric value convertible to string).';
-	public const ERROR_MINIMUM_LENGTH      = 'value ({{VALUE}}) is shorter than {{MINIMUM}} characters.';
-	public const ERROR_MAXIMUM_LENGTH      = 'value ({{VALUE}}) is longer than {{MAXIMUM}} characters.';
-	public const ERROR_PATTERN             = 'value does not match with the expected pattern ({{PATTERN}}).';
-	public const ERROR_COLLECTION          = 'value must be a collection.';
-	public const ERROR_COLLECTION_TYPE     = 'value must be a collection of \'{{TYPE}}\' items.';
-	public const ERROR_ENTITY              = 'value is not a \'{{TYPE}}\' entity.';
+	public const ERROR_PARAMETERS          = 'Wrong parameters';
+	public const ERROR_BODY                = 'Wrong body';
+	public const ERROR_COLLECTION_RESPONSE = 'Wrong response (a collection was expected)';
+	public const ERROR_NUMERIC             = 'value must be numeric';
+	public const ERROR_MINIMUM             = 'value {{VALUE}} is out of range (lesser than {{MINIMUM}})';
+	public const ERROR_MAXIMUM             = 'value {{VALUE}} is out of range (greater than {{MAXIMUM}})';
+	public const ERROR_ENUMS               = 'value {{VALUE}} does not belong to enumerated values ({{ENUMS}})';
+	public const ERROR_STRING              = 'value must be a string (or a numeric value convertible to string)';
+	public const ERROR_MINIMUM_LENGTH      = 'value ({{VALUE}}) is shorter than {{MINIMUM}} characters';
+	public const ERROR_MAXIMUM_LENGTH      = 'value ({{VALUE}}) is longer than {{MAXIMUM}} characters';
+	public const ERROR_PATTERN             = 'value does not match with the expected pattern ({{PATTERN}})';
+	public const ERROR_COLLECTION          = 'value must be a collection';
+	public const ERROR_COLLECTION_TYPE     = 'value must be a collection of \'{{TYPE}}\' items';
+	public const ERROR_RECORD              = 'value is not a \'{{TYPE}}\' record';
 
 	// Router
 	private $_Router;
@@ -134,19 +136,12 @@ class TApi extends AModule
 	protected $_LastErrorCode;
 	public final function LastErrorCode() : int { return $this->_LastErrorCode; }
 
-	// Entities
-	private $_Entities;
-	public final function Entities() : array                       { return $this->_Entities;                     }
-	public final function Entity(   string $name) : TTypeEntity    { return $this->_Entities[$name] ?? null;      }
-	public final function HasEntity(string $name) : bool           { return isset($this->_Entities[$name]);       }
-	protected    function AddEntity(TTypeEntity $entity)           { $this->_Entities[$entity->Name()] = $entity; }
-
 	// Types
 	private $_Types;
-	public final function Types() : array               { return $this->_Types;                 }
-	public final function Type(   string $name) : AType { return $this->_Types[$name] ?? null;  }
-	public final function HasType(string $name) : bool  { return isset($this->_Types[$name]);   }
-	protected    function AddType(AType $type)          { $this->_Types[$type->Name()] = $type; }
+	public final function Types() : array               { return $this->_Types;                                     }
+	public final function Type(   string $name) : AType { return $this->_Types[$name] ?? $this->CreateType($name);  }
+	public final function HasType(string $name) : bool  { return isset($this->_Types[$name]);                       }
+	protected    function AddType(AType $type)          { $this->_Types[$type->Name()] = $type;                     }
 
 	// Headers
 	protected $_Headers = null;
@@ -559,7 +554,8 @@ class TApi extends AModule
 			// Outputs Swagger UI
 			echo $html;
 			exit();
-		};
+		}
+		;
 
 		return $res;
 	}
@@ -584,6 +580,9 @@ class TApi extends AModule
 
 		// "Default" parameter
 		$res.= '.swagger-ui .parameter__default { font-size: 0.8em; color: violet }';
+
+		// Hides select inputs, when not in tryout
+		$res.= '.parameters-col_description select[disabled] { display: none }';
 
 		// Result
 		return $res;
@@ -610,60 +609,6 @@ class TApi extends AModule
 	}
 
 
-	//------------------------------------------------------------------------------------------------------------------
-	// Path argument (used to get the endpoint path from the complete path, via the router)
-	//------------------------------------------------------------------------------------------------------------------
-	protected function PathArg() : string
-	{
-		return '__path';
-	}
-
-
-	//------------------------------------------------------------------------------------------------------------------
-	// Subset argument
-	//------------------------------------------------------------------------------------------------------------------
-	public function SubsetArg() : string
-	{
-		return 'subset';
-	}
-
-
-	//------------------------------------------------------------------------------------------------------------------
-	// Fields argument
-	//------------------------------------------------------------------------------------------------------------------
-	public function FieldsArg() : string
-	{
-		return 'fields';
-	}
-
-
-	//------------------------------------------------------------------------------------------------------------------
-	// Sort argument
-	//------------------------------------------------------------------------------------------------------------------
-	public function SortArg() : string
-	{
-		return 'sort';
-	}
-
-
-	//------------------------------------------------------------------------------------------------------------------
-	// Offset argument
-	//------------------------------------------------------------------------------------------------------------------
-	public function OffsetArg() : string
-	{
-		return 'offset';
-	}
-
-
-	//------------------------------------------------------------------------------------------------------------------
-	// Limit argument
-	//------------------------------------------------------------------------------------------------------------------
-	public function LimitArg() : string
-	{
-		return 'limit';
-	}
-
-
 
 
 	//==================================================================================================================
@@ -676,7 +621,7 @@ class TApi extends AModule
 	//------------------------------------------------------------------------------------------------------------------
 	// Gets all data through a given endpoint
 	//------------------------------------------------------------------------------------------------------------------
-	public function GetAll(
+	public function Getall(
 		string $url,
 		string $token   = '',
 		array  $options = array()) : bool|int|float|string|array|null
@@ -906,38 +851,56 @@ class TApi extends AModule
 
 
 	//------------------------------------------------------------------------------------------------------------------
-	// Gets a given string argument from a given arguments array, after removing it
+	// Path argument (used to get the endpoint path from the complete path, via the router)
 	//------------------------------------------------------------------------------------------------------------------
-	protected function StringArgValue(string $arg, array &$args) : string
+	protected function PathArg() : string
 	{
-		$res = '';
-
-		if(isset($args[$arg]))
-		{
-			$res = $args[$arg];
-
-			unset($args[$arg]);
-		}
-
-		return $res;
+		return '__path';
 	}
 
 
 	//------------------------------------------------------------------------------------------------------------------
-	// Gets a given int argument from a given arguments array, after removing it
+	// Sorts argument
 	//------------------------------------------------------------------------------------------------------------------
-	protected function IntArgValue(string $arg, array &$args) : string
+	public function SortsArg() : string
 	{
-		$res = 0;
+		return '__sorts';
+	}
 
-		if(isset($args[$arg]))
-		{
-			$res = $args[$arg];
 
-			unset($args[$arg]);
-		}
+	//------------------------------------------------------------------------------------------------------------------
+	// Offset argument
+	//------------------------------------------------------------------------------------------------------------------
+	public function OffsetArg() : string
+	{
+		return '__offset';
+	}
 
-		return $res;
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Limit argument
+	//------------------------------------------------------------------------------------------------------------------
+	public function LimitArg() : string
+	{
+		return '__limit';
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Subsets argument
+	//------------------------------------------------------------------------------------------------------------------
+	public function SubsetsArg() : string
+	{
+		return '__subsets';
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Fields argument
+	//------------------------------------------------------------------------------------------------------------------
+	public function FieldsArg() : string
+	{
+		return '__fields';
 	}
 
 
@@ -958,30 +921,29 @@ class TApi extends AModule
 
 
 	//------------------------------------------------------------------------------------------------------------------
-	// Creates or gets a type after its name
+	// Creates a type after its name
 	//------------------------------------------------------------------------------------------------------------------
-	protected function CreateType(string $typeName) : ?AType
+	protected function CreateType(string $typeName) : AType
 	{
-		// If type already exists :
-		// Returns it
-		if($this->HasType($typeName))
-		{
-			return $this->Type($typeName);
-		}
-
 		// If type does not exist,
 		// And has a well-known name :
 		// Cretes it
-		if($typeName === 'bool'      ) { return $this->MakeTypeBoolean(   $typeName); }
-		if($typeName === 'boolean'   ) { return $this->MakeTypeBoolean(   $typeName); }
-		if($typeName === 'int'       ) { return $this->MakeTypeInteger(   $typeName); }
-		if($typeName === 'integer'   ) { return $this->MakeTypeInteger(   $typeName); }
-		if($typeName === 'float'     ) { return $this->MakeTypeFloat(     $typeName); }
-		if($typeName === 'double'    ) { return $this->MakeTypeFloat(     $typeName); }
-		if($typeName === 'string'    ) { return $this->MakeTypeString(    $typeName); }
-		if($typeName === 'text'      ) { return $this->MakeTypeString(    $typeName); }
-		if($typeName === 'array'     ) { return $this->MakeTypeCollection($typeName); }
-		if($typeName === 'collection') { return $this->MakeTypeCollection($typeName); }
+		if($typeName === 'bool'      ) { return $this->MakeTypeBoolean(   $typeName   ); }
+		if($typeName === 'boolean'   ) { return $this->MakeTypeBoolean(   $typeName   ); }
+		if($typeName === 'int'       ) { return $this->MakeTypeInteger(   $typeName   ); }
+		if($typeName === 'integer'   ) { return $this->MakeTypeInteger(   $typeName   ); }
+		if($typeName === 'uint'      ) { return $this->MakeTypeInteger(   $typeName, 0); }
+		if($typeName === 'uinteger'  ) { return $this->MakeTypeInteger(   $typeName, 0); }
+		if($typeName === 'zint'      ) { return $this->MakeTypeInteger(   $typeName, 1); }
+		if($typeName === 'zinteger'  ) { return $this->MakeTypeInteger(   $typeName, 1); }
+		if($typeName === 'float'     ) { return $this->MakeTypeFloat(     $typeName   ); }
+		if($typeName === 'double'    ) { return $this->MakeTypeFloat(     $typeName   ); }
+		if($typeName === 'string'    ) { return $this->MakeTypeString(    $typeName   ); }
+		if($typeName === 'text'      ) { return $this->MakeTypeString(    $typeName   ); }
+		if($typeName === 'zstring'   ) { return $this->MakeTypeString(    $typeName, 1); }
+		if($typeName === 'ztext'     ) { return $this->MakeTypeString(    $typeName, 1); }
+		if($typeName === 'array'     ) { return $this->MakeTypeCollection($typeName   ); }
+		if($typeName === 'collection') { return $this->MakeTypeCollection($typeName   ); }
 
 		// If type is in the form "xyz[]" (aka an array of "xyz" type) :
 		// Creates a collection type
@@ -993,8 +955,8 @@ class TApi extends AModule
 		}
 
 		// Otherwise :
-		// Returns nothing
-		return null;
+		// Creates as a string type
+		return $this->MakeTypeString($typeName);
 	}
 
 
@@ -1005,7 +967,7 @@ class TApi extends AModule
 		string $name,
 		string $description            = '',
 		string $externalDocDescription = '',
-		string $externalDocUrl         = '') : ?TChapter
+		string $externalDocUrl         = '') : TChapter
 	{
 		$res = $this->MakeChapter($name, $description, $externalDocDescription, $externalDocUrl);
 
@@ -1049,23 +1011,265 @@ class TApi extends AModule
 
 
 	//------------------------------------------------------------------------------------------------------------------
-	// Declares a new operation on a given endpoint (only when needed, to gain some performance)
+	// Declares a new GETALL operation on a given endpoint (only when needed, to gain some performance)
 	//------------------------------------------------------------------------------------------------------------------
-	public function DeclareOperation(
-		?TEndpoint $endpoint,
-		string     $verb,
-		callable   $callback,
-		string     $summary                = '',
-		string     $description            = '',
-		string     $code                   = '',
-		string     $responseTypeName       = '',
-		string     $externalDocDescription = '',
-		string     $externalDocUrl         = '',
-		bool       $isDeprecated           = false) : ?TOperation
+	public function DeclareGetall(
+		?TEndpoint   $endpoint,
+		callable     $callback,
+		AType|string $responseItemsType      = null,
+		string       $summary                = '',
+		string       $description            = '',
+		string       $code                   = '',
+		string       $externalDocDescription = '',
+		string       $externalDocUrl         = '',
+		bool         $isDeprecated           = false) : ?TOperation
 	{
-		// If endpoint is not declared :
+		// If endpoint is not declared,
+		// Or if current HTTP verb is not the one of current endpoint (except on Api portal) :
 		// Does nothing
-		if($endpoint === null)
+		if(($endpoint === null) || (!$this->IsPortal() && ($this->Core()->CurrentVerb() !== 'GET')))
+		{
+			return null;
+		}
+
+		// Defines response type as a collection of items type
+		if(is_string($responseItemsType))
+		{
+			$responseItemsType = $this->Type($responseItemsType);
+		}
+
+		$name = 'Collection';
+		if($responseItemsType !== null)
+		{
+			$name.= ucfirst($responseItemsType->Name());
+		}
+
+		$responseType = $this->MakeTypeCollection($name, $responseItemsType);
+
+		// Builds the operation
+		$res = $this->MakeOperation(
+			$endpoint,
+			'GETALL',
+			$callback,
+			null,
+			$responseType,
+			$summary,
+			$description,
+			$code,
+			$externalDocDescription,
+			$externalDocUrl,
+			$isDeprecated);
+
+		// Result
+		return $res;
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Declares a new GET operation on a given endpoint (only when needed, to gain some performance)
+	//------------------------------------------------------------------------------------------------------------------
+	public function DeclareGet(
+		?TEndpoint   $endpoint,
+		callable     $callback,
+		AType|string $responseType           = null,
+		string       $summary                = '',
+		string       $description            = '',
+		string       $code                   = '',
+		string       $externalDocDescription = '',
+		string       $externalDocUrl         = '',
+		bool         $isDeprecated           = false) : ?TOperation
+	{
+		// If endpoint is not declared,
+		// Or if current HTTP verb is not the one of current endpoint (except on Api portal) :
+		// Does nothing
+		if(($endpoint === null) || (!$this->IsPortal() && ($this->Core()->CurrentVerb() !== 'GET')))
+		{
+			return null;
+		}
+
+		// Defines response type
+		if(is_string($responseType))
+		{
+			$responseType = $this->Type($responseType);
+		}
+
+		// Builds the operation
+		$res = $this->MakeOperation(
+			$endpoint,
+			'GET',
+			$callback,
+			null,
+			$responseType,
+			$summary,
+			$description,
+			$code,
+			$externalDocDescription,
+			$externalDocUrl,
+			$isDeprecated);
+
+		// Result
+		return $res;
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Declares a new POST operation on a given endpoint (only when needed, to gain some performance)
+	//------------------------------------------------------------------------------------------------------------------
+	public function DeclarePost(
+		?TEndpoint   $endpoint,
+		callable     $callback,
+		AType|string $bodyType               = null,
+		string       $summary                = '',
+		string       $description            = '',
+		string       $code                   = '',
+		string       $externalDocDescription = '',
+		string       $externalDocUrl         = '',
+		bool         $isDeprecated           = false) : ?TOperation
+	{
+		// If endpoint is not declared,
+		// Or if current HTTP verb is not the one of current endpoint (except on Api portal) :
+		// Does nothing
+		if(($endpoint === null) || (!$this->IsPortal() && ($this->Core()->CurrentVerb() !== 'POST')))
+		{
+			return null;
+		}
+
+		// Defines body type
+		if(is_string($bodyType))
+		{
+			$bodyType = $this->Type($bodyType);
+		}
+
+		// Builds the operation
+		$res = $this->MakeOperation(
+			$endpoint,
+			'POST',
+			$callback,
+			$bodyType,
+			null,
+			$summary,
+			$description,
+			$code,
+			$externalDocDescription,
+			$externalDocUrl,
+			$isDeprecated);
+
+		// Result
+		return $res;
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Declares a new PUT operation on a given endpoint (only when needed, to gain some performance)
+	//------------------------------------------------------------------------------------------------------------------
+	public function DeclarePut(
+		?TEndpoint   $endpoint,
+		callable     $callback,
+		AType|string $bodyType               = null,
+		string       $summary                = '',
+		string       $description            = '',
+		string       $code                   = '',
+		string       $externalDocDescription = '',
+		string       $externalDocUrl         = '',
+		bool         $isDeprecated           = false) : ?TOperation
+	{
+		// If endpoint is not declared,
+		// Or if current HTTP verb is not the one of current endpoint (except on Api portal) :
+		// Does nothing
+		if(($endpoint === null) || (!$this->IsPortal() && ($this->Core()->CurrentVerb() !== 'PUT')))
+		{
+			return null;
+		}
+
+		// Defines body type
+		if(is_string($bodyType))
+		{
+			$bodyType = $this->Type($bodyType);
+		}
+
+		// Builds the operation
+		$res = $this->MakeOperation(
+			$endpoint,
+			'PUT',
+			$callback,
+			$bodyType,
+			null,
+			$summary,
+			$description,
+			$code,
+			$externalDocDescription,
+			$externalDocUrl,
+			$isDeprecated);
+
+		// Result
+		return $res;
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Declares a new PATCH operation on a given endpoint (only when needed, to gain some performance)
+	//------------------------------------------------------------------------------------------------------------------
+	public function DeclarePatch(
+		?TEndpoint   $endpoint,
+		callable     $callback,
+		AType|string $bodyType               = null,
+		string       $summary                = '',
+		string       $description            = '',
+		string       $code                   = '',
+		string       $externalDocDescription = '',
+		string       $externalDocUrl         = '',
+		bool         $isDeprecated           = false) : ?TOperation
+	{
+		// If endpoint is not declared,
+		// Or if current HTTP verb is not the one of current endpoint (except on Api portal) :
+		// Does nothing
+		if(($endpoint === null) || (!$this->IsPortal() && ($this->Core()->CurrentVerb() !== 'PATCH')))
+		{
+			return null;
+		}
+
+		// Defines body type
+		if(is_string($bodyType))
+		{
+			$bodyType = $this->Type($bodyType);
+		}
+
+		// Builds the operation
+		$res = $this->MakeOperation(
+			$endpoint,
+			'PATCH',
+			$callback,
+			$bodyType,
+			null,
+			$summary,
+			$description,
+			$code,
+			$externalDocDescription,
+			$externalDocUrl,
+			$isDeprecated);
+
+		// Result
+		return $res;
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Declares a new DELETE operation on a given endpoint (only when needed, to gain some performance)
+	//------------------------------------------------------------------------------------------------------------------
+	public function DeclareDelete(
+		?TEndpoint   $endpoint,
+		callable     $callback,
+		string       $summary                = '',
+		string       $description            = '',
+		string       $code                   = '',
+		string       $externalDocDescription = '',
+		string       $externalDocUrl         = '',
+		bool         $isDeprecated           = false) : ?TOperation
+	{
+		// If endpoint is not declared,
+		// Or if current HTTP verb is not the one of current endpoint (except on Api portal) :
+		// Does nothing
+		if(($endpoint === null) || (!$this->IsPortal() && ($this->Core()->CurrentVerb() !== 'DELETE')))
 		{
 			return null;
 		}
@@ -1073,23 +1277,16 @@ class TApi extends AModule
 		// Builds the operation
 		$res = $this->MakeOperation(
 			$endpoint,
-			$verb,
+			'DELETE',
 			$callback,
+			null,
+			null,
 			$summary,
 			$description,
 			$code,
-			$this->CreateType($responseTypeName),
 			$externalDocDescription,
 			$externalDocUrl,
 			$isDeprecated);
-
-		$endpoint->AddOperation($verb, $res);
-
-		// Auto-declare wildcard parameters
-		foreach($endpoint->Wildcards() as $k => $v)
-		{
-			$this->DeclareParameter($res, $k, '', true, null, false);
-		}
 
 		// Result
 		return $res;
@@ -1102,7 +1299,7 @@ class TApi extends AModule
 	public function DeclareParameter(
 		?TOperation  $operation,
 		string       $name,
-		string       $typeName     = '',
+		AType|string $type         = '',
 		bool         $isMandatory  = false,
 		mixed        $default      = null,
 		string       $summary      = '',
@@ -1126,11 +1323,9 @@ class TApi extends AModule
 		}
 
 		// Gets type
-		$type = $this->CreateType($typeName);
-
-		if($type === null)
+		if(is_string($type))
 		{
-			return null;
+			$type = $this->CreateType($type);
 		}
 
 		// Makes parameter
@@ -1157,7 +1352,7 @@ class TApi extends AModule
 	//------------------------------------------------------------------------------------------------------------------
 	public function BuildUrl(string $path)
 	{
-		return $this->Core()->Protocol() . $this->Core()->Domain . '/' . $this->Root() . '/' . $path;
+		return $this->Core()->Protocol() . $this->Core()->Domain() . '/' . $this->Root() . '/' . $path;
 	}
 
 
@@ -1183,8 +1378,8 @@ class TApi extends AModule
 		}
 
 		// Otherwise :
-		// Gets the subset and indicates that the endpoint matches
-		$args[$this->SubsetArg()] = substr($path, strlen($endpoint->Path()) + 1);
+		// Gets the subsets and indicates that the endpoint matches
+		$args[$this->SubsetsArg()] = substr($path, strlen($endpoint->Path()) + 1);
 
 		return true;
 	}
@@ -1203,26 +1398,33 @@ class TApi extends AModule
 
 		foreach($wildcards as $k => $v)
 		{
-			$regexp = str_replace('{' . $v . '}', '([^/]+)', $regexp);
+			$regexp = str_replace('{' . $k . '}', '([^/]+)', $regexp);
 		}
 
-		// Adds subset management
-		$wildcards[] = $this->SubsetArg();
-		$regexp     .= '(/.*){0,1}';
+		// Adds subsets management
+		$wildcards[$this->SubsetsArg()] = null;
+		$regexp.= '(/.*){0,1}';
 
 		// If path matches :
 		if(preg_match('#' . $regexp . '#', $path, $matches) === 1)
 		{
-			// Stores wildcard values as new args
+			// Stores wildcard values as new args (only if wildcard type is respected)
 			$i = 1;
 			foreach($wildcards as $k => $v)
 			{
 				if(isset($matches[$i]))
 				{
-					$args[$v] = $matches[$i];
+					$args[$k] = $matches[$i];
 				}
 
 				$i++;
+			}
+
+			// if a subsets arg exists :
+			// Removes the leading "/"
+			if(isset($args[$this->SubsetsArg()]) && (substr($args[$this->SubsetsArg()], 0, 1) === '/'))
+			{
+				$args[$this->SubsetsArg()] = substr($args[$this->SubsetsArg()], 1);
 			}
 
 			// Indicates that the endpoint matches
@@ -1238,7 +1440,7 @@ class TApi extends AModule
 	//------------------------------------------------------------------------------------------------------------------
 	// Gets the endpoint + args corresponding to a given Url path
 	//------------------------------------------------------------------------------------------------------------------
-	protected function UrlToEndpoint(string $path, array &$args) : TEndpoint|null
+	protected function UrlToEndpoint(string $path, array &$args) : ?TEndpoint
 	{
 		// Gets endpoints from the longest to the shortest one
 		// (to proceed with the most detailled paths first, for instance 'items/{id}' is prioritary to 'items'))
@@ -1280,101 +1482,65 @@ class TApi extends AModule
 
 
 	//------------------------------------------------------------------------------------------------------------------
-	// Gets internal structure labels
+	// Builds a partial response
 	//------------------------------------------------------------------------------------------------------------------
-	public function ErrorCodeLabel()    : string { return '__code';    }
-	public function ErrorMessageLabel() : string { return '__message'; }
-	public function CountLabel()        : string { return '__count';   }
-	public function DataLabel()         : string { return '__data';    }
-
-
-	//------------------------------------------------------------------------------------------------------------------
-	// Generates an error response
-	//------------------------------------------------------------------------------------------------------------------
-	public function ErrorResponse(int $code, string $message = '') : array
+	public function PartialResponse(mixed $data, int $totalCount) : mixed
 	{
-		if($message === '')
+		if(!is_array($data))
 		{
-			$message = $this->Router()->CodeMessage($code);
+			return $data;
 		}
 
 		return array(
-			$this->ErrorCodeLabel()    => $code,
-			$this->ErrorMessageLabel() => $message);
+			'__data'       => $data,
+			'__totalCount' => $totalCount);
 	}
 
 
 	//------------------------------------------------------------------------------------------------------------------
-	// Generates a counted response
+	// Indicates if a response is a partial response
 	//------------------------------------------------------------------------------------------------------------------
-	public function CountedResponse(array $data, int $count) : array
+	public function IsPartialResponse(mixed $response) : bool
 	{
-		return array(
-			$this->CountLabel() => $count,
-			$this->DataLabel()  => $data);
+		return (is_array($response             ) &&
+		        (count($response) === 2        ) &&
+				isset($response['__data'      ]) &&
+				isset($response['__totalCount']));
 	}
 
 
 	//------------------------------------------------------------------------------------------------------------------
-	// Indicates if the given response is an error response
+	// Gets data from partial response
 	//------------------------------------------------------------------------------------------------------------------
-	public function IsErrorResponse(mixed $response) : bool
+	public function PartialData(mixed $response) : array
 	{
-		return (isset($response[$this->ErrorCodeLabel()   ]) &&
-		        isset($response[$this->ErrorMessagelabel()]) &&
-		        (count($response) === 2));
-	}
-
-
-	//------------------------------------------------------------------------------------------------------------------
-	// Indicates if the given response is counted (i.e. array('count' => <int>, 'data' => <array>))
-	//------------------------------------------------------------------------------------------------------------------
-	public function IsCountedResponse(mixed $response) : bool
-	{
-		return (isset(   $response[$this->CountLabel()]) &&
-		        isset(   $response[$this->DataLabel() ]) &&
-				(count($response) === 2));
- 	}
-
-
-	//------------------------------------------------------------------------------------------------------------------
-	// Indicates if the given response is a collection (i.e. a set of entities)
-	//------------------------------------------------------------------------------------------------------------------
-	public function IsCollectionResponse(mixed $response) : bool
-	{
-		if(is_array($response))
+		if(isset($response['__data']))
 		{
-			foreach($response as $k => $v)
-			{
-				if(!is_int($k) || !is_array($v))
-				{
-					return false;
-				}
-			}
-
-			return true;
+			return $response['__data'];
 		}
 
-		return false;
+		return $response;
 	}
 
 
 	//------------------------------------------------------------------------------------------------------------------
-	// Indicates if the given response is an entity (i.e. a set of attributes / values)
+	// Gets total count from partial response
 	//------------------------------------------------------------------------------------------------------------------
-	public function IsEntityResponse(mixed $response) : bool
+	public function PartialTotalCount(mixed $response) : int
 	{
-		return (is_array($response) &&
-		        !$this->IsCollectionResponse($response) &&
-		        !$this->IsErrorResponse(     $response) &&
-		        !$this->IsCountedResponse(   $response));
+		if(isset($response['__totalCount']))
+		{
+			return $response['__totalCount'];
+		}
+
+		return 0;
 	}
 
 
 	//------------------------------------------------------------------------------------------------------------------
 	// Outputs a response header
 	//------------------------------------------------------------------------------------------------------------------
-	protected function Header(TEndpoint $endpoint = null)
+	public function Header(TEndpoint $endpoint = null)
 	{
 		// The "*" value for allowed verbs is not implemented on all browsers,
 		// so it must be replaced by a list of major methods
@@ -1387,7 +1553,7 @@ class TApi extends AModule
 			$allowedVerbs = $endpoint->AllowedVerbs();
 		}
 
-		// Default maximum age
+		// Maximum age
 		if($endpoint === null)
 		{
 			$maximumAge = 3600;
@@ -1412,11 +1578,30 @@ class TApi extends AModule
 
 
 	//------------------------------------------------------------------------------------------------------------------
-	// Exits with a given Http code
+	// Exists with a given Http code
 	//------------------------------------------------------------------------------------------------------------------
 	protected function Exit(
-		int       $code,
+		TEndpoint $endpoint = null,
+		int       $code     = 400,
+		mixed     $data     = array())
+	{
+		// Formats into Json format
+		$json = json_encode($data, JSON_PRETTY_PRINT);
+
+		// Outputs result
+		$this->Header($endpoint);
+		http_response_code($code);
+		echo $json;
+		exit();
+	}
+
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Exits with a given Http code
+	//------------------------------------------------------------------------------------------------------------------
+	protected function ExitError(
 		TEndpoint $endpoint    = null,
+		int       $code        = 400,
 		string    $message     = '',
 		string    $description = '',
 		string    $url         = '')
@@ -1446,72 +1631,54 @@ class TApi extends AModule
 			$data = array('message' => $message);
 		}
 
-		// Formats into Json format
-		$json = json_encode($data, JSON_PRETTY_PRINT);
-
-		// Outputs result
-		$this->Header($endpoint);
-		http_response_code($code);
-		echo $json;
-		exit();
+		// Exit
+		$this->Exit($endpoint, $code, $data);
 	}
 
 
 	//------------------------------------------------------------------------------------------------------------------
-	// Exits with a 200 code + response
+	// Exits when the endpoint is undefined
 	//------------------------------------------------------------------------------------------------------------------
-	protected function Exit200(mixed $response, TEndpoint $endpoint)
+	protected function ExitNoEndpoint()
 	{
-		// Prepares result into Json format
-		$json = json_encode($response, JSON_PRETTY_PRINT);
+		$this->ExitError(null, 404);
+	}
 
-		// Outputs result
-		$this->Header($endpoint);
-		http_response_code(200);
-		echo $json;
-		exit();
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Exits with a 200 code
+	//------------------------------------------------------------------------------------------------------------------
+	// 200 corresponds to a standard success
+	//------------------------------------------------------------------------------------------------------------------
+	public function Exit200(TEndpoint $endpoint, mixed $data)
+	{
+		$this->Exit($endpoint, 200, $data);
 	}
 
 
 	//------------------------------------------------------------------------------------------------------------------
 	// Exits with a 201 code
 	//------------------------------------------------------------------------------------------------------------------
-	// 201 corresponds to a successful POST. The newly created id must be returned via a "location" header
+	// 201 corresponds to a successful POST
 	//------------------------------------------------------------------------------------------------------------------
-	protected function Exit201(mixed $response, string $path, TEndpoint $endpoint)
+	public function Exit201(TEndpoint $endpoint, string|int $id)
 	{
-		// Prepares the location to the newly created element
-		// (Id is, by convention, the first element provided in response data)
-		$id       = '';
-		$location = '';
-
-		if(is_array($response))
-		{
-			foreach($response as $v)
-			{
-				$id       = $v;
-				$location = $this->BuildUrl($path . '/' . $id);
-				break;
-			}
-		}
-
 		// Prepares result into Json format
 		$data = array('message' => $this->Router()->CodeMessage(201));
 
+		// Adds location to new record
 		if($id !== '')
 		{
+			$location = $this->BuildUrl($endpoint->Path() . '/' . $id);
+
 			$data['id'      ] = $id;
 			$data['location'] = $location;
+
+			header('Location: ' . $location);
 		}
 
-		$json = json_encode($data, JSON_PRETTY_PRINT);
-
-		// Outputs result
-		$this->Header($endpoint);
-		header('Location: ' . $location);
-		http_response_code(201);
-		echo $json;
-		exit();
+		// Exit
+		$this->Exit($endpoint, 201, $data);
 	}
 
 
@@ -1520,235 +1687,108 @@ class TApi extends AModule
 	//------------------------------------------------------------------------------------------------------------------
 	// 206 corresponds to a partial GETALL
 	//------------------------------------------------------------------------------------------------------------------
-	protected function Exit206(mixed $response, int $offset, int $limit, int $count, TEndpoint $endpoint)
+	public function Exit206(TEndpoint $endpoint, mixed $data, int $offset, int $limit, int $totalCount)
 	{
-		// Prepares result into Json format
-		$json = json_encode($response, JSON_PRETTY_PRINT);
+		// Builds links to first / previous / next / last pages
+		$rangeOffset = $offset . '-' . ($offset + $limit - 1);
+		$rangeLimit  = ($totalCount < 0 ? '*' : $totalCount);
 
-		// Outputs result
-		$this->Header($endpoint);
-		header('Content-Range: ' . $offset . '-' . ($offset + $limit - 1) . '/' . ($count < 0 ? '*' : $count));
+		header('Content-Range: ' . $rangeOffset . '/' . $rangeLimit);
 		header('Accept-Ranges: bytes');
-		http_response_code(206);
 
-		// If global count is determined :
-		// Defines links to first, previous, next and last pages
-		if($count >= 0)
+		// Prepares current url to be used for first, previous, next and last page links
+		$url = $this->Core()->CurrentAbsoluteUrl();
+		$url = $this->Core()->RemoveArgumentFromUrl($url, $this->OffsetArg());
+		$url = $this->Core()->RemoveArgumentFromUrl($url, $this->LimitArg() );
+
+		if(strpos($url, '?') === false)
 		{
-			// Prepares current url
-			$url = $this->Core()->CurrentAbsoluteUrl();
-			$url = $this->Core()->RemoveArgumentFromUrl($url, $this->OffsetArg());
-			$url = $this->Core()->RemoveArgumentFromUrl($url, $this->LimitArg() );
+			$url.= '?';
+		}
+		else
+		{
+			$url.= '&';
+		}
 
-			if(strpos($url, '?') === false)
-			{
-				$url.= '?';
-			}
-			else
-			{
-				$url.= '&';
-			}
+		// Link to first page
+		$links = '<' . $url . $this->OffsetArg() . '=0';
+		$links.= '&' . $this->LimitArg() . '=' . $limit . '>; rel="first",';
 
-			// Link to first page
-			$links = '<' . $url . $this->OffsetArg() . '=0';
-			$links.= '&' . $this->LimitArg() . '=' . $limit . '>; rel="first",';
+		// Link to previous page
+		$previous       = max(0, $offset - $limit);
+		$previousLength = min($offset, $limit);
 
-			// Link to previous page
-			$previous       = max(0, $offset - $limit);
-			$previousLength = min($offset, $limit);
+		if($offset > 0)
+		{
+			$links.= '<' . $url . $this->OffsetArg() . '=' . $previous;
+			$links.= '&' . $this->LimitArg() . '=' . $previousLength . '>; rel="prev",';
+		}
 
-			if($offset > 0)
-			{
-				$links.= '<' . $url . $this->OffsetArg() . '=' . $previous;
-				$links.= '&' . $this->LimitArg() . '=' . $previousLength . '>; rel="prev",';
-			}
+		// Link to next page
+		if((($totalCount === 0) && !empty($data)) || ($offset + $limit < $totalCount))
+		{
+			$links.= '<' . $url . $this->OffsetArg() . '=' . ($offset + $limit);
+			$links.= '&' . $this->LimitArg() . '=' . $limit . '>; rel="next",';
+		}
 
-			// Link to next page
-			if($offset + $limit < $count)
-			{
-				$links.= '<' . $url . $this->OffsetArg() . '=' . ($offset + $limit);
-				$links.= '&' . $this->LimitArg() . '=' . $limit . '>; rel="next",';
-			}
-
-			// Link to last page
-			$last = $limit * floor(max(0, ($count - 1)) / $limit);
+		// Link to last page
+		if($totalCount > 0)
+		{
+			$last = $limit * floor(max(0, ($totalCount - 1)) / $limit);
 
 			$links.= '<' . $url . $this->OffsetArg() . '=' . $last;
 			$links.= '&' . $this->LimitArg() . '=' . $limit . '>; rel="last"';
-
-			// Adds to header
-			header('Link: ' . $links);
 		}
 
-		// Outputs data
-		echo $json;
-		exit();
+		// Adds to header
+		header('Link: ' . $links);
+
+		// Exit
+		$this->Exit($endpoint, 206, $data);
 	}
 
 
 	//------------------------------------------------------------------------------------------------------------------
-	// Exits on an error response
+	// Exits with a 400 code
 	//------------------------------------------------------------------------------------------------------------------
-	protected function ExitError(array $errorResponse, TEndpoint $endpoint)
+	// 400 corresponds to a generic error
+	//------------------------------------------------------------------------------------------------------------------
+	public function Exit400(
+		TEndpoint $endpoint,
+		string    $message,
+		string    $description = '',
+		string    $url         = '')
 	{
-		$errorCode    = $errorResponse[$this->ErrorCodeLabel()   ];
-		$errorMessage = $errorResponse[$this->ErrorMessageLabel()];
-
-		$this->Exit($errorCode, $endpoint, $this->Router()->Message($errorCode), $errorMessage);
+		$this->ExitError($endpoint, 400, $message, $description, $url);
 	}
 
 
 	//------------------------------------------------------------------------------------------------------------------
-	// Runs a GETALL
+	// Exits with a 404 error
 	//------------------------------------------------------------------------------------------------------------------
-	protected function RunGetAll(mixed $response, int $offset, int $limit, TEndpoint $endpoint)
+	// 404 corresponds to an "unfound resource" error
+	//------------------------------------------------------------------------------------------------------------------
+	public function Exit404(TEndpoint $endpoint = null)
 	{
-		// If response is an error :
-		// Outputs this error
-		if($this->IsErrorResponse($response))
-		{
-			$this->ExitError($response, $endpoint);
-		}
-
-		// If response is counted :
-		if($this->IsCountedResponse($response))
-		{
-			// Gets count and data
-			$response   = $response[$this->Datalabel() ];
-			$count      = $response[$this->CountLabel()];
-
-			// Ensures that response is a not indexed array
-			// (otherwise, it could be a problem to render as a list in JSON)
-			if(is_array($response))
-			{
-				$response = array_values($response);
-			}
-			else
-			{
-				$response = array();
-			}
-
-			// If response is not complete :
-			if(($limit > 0) && (($offset !== 0) || ($count > $limit)))
-			{
-				// Ensures that current page itself does not overflow the limit
-				if(count($response) > $limit)
-				{
-					$response = array_slice($response, 0, $limit);
-				}
-
-				// Outputs a partial response
-				$this->Exit206($response, $offset, $limit, $count, $endpoint);
-			}
-
-			// Otherwise :
-			// Outputs a standard response
-			$this->Exit200($response, $endpoint);
-		}
-
-		// If response is a collection :
-		elseif($this->IsCollectionResponse($response))
-		{
-			// Gets response count
-			$count = count($response);
-
-			// Ensures that response is a not indexed array
-			// (otherwise, it could be a problem to render as a list in JSON)
-			if(is_array($response))
-			{
-				$response = array_values($response);
-			}
-			else
-			{
-				$response = array();
-			}
-
-			// If response is not complete :
-			if(($limit > 0) && (($offset !== 0) || ($count > $limit)))
-			{
-				// Ensures that collection does not overflow the limit
-				if($count > $limit)
-				{
-					$response = array_slice($response, 0, $limit);
-				}
-
-				// Outputs a partial response
-				$this->Exit206($response, $offset, $limit, -1, $endpoint);
-			}
-
-			// Otherwise :
-			// Outputs a standard response
-			$this->Exit200($response, $endpoint);
-		}
-
-		// Other cases :
-		// Returns an empty array
-		else
-		{
-			$this->Exit200(array(), $endpoint);
-		}
+		$this->ExitError($endpoint, 404);
 	}
 
 
 	//------------------------------------------------------------------------------------------------------------------
-	// Runs a GET
+	// Exits with a 405 code
 	//------------------------------------------------------------------------------------------------------------------
-	protected function RunGet(mixed $response, TEndpoint $endpoint)
+	public function Exit405(TEndpoint $endpoint)
 	{
-		// If response is an error :
-		// Outputs this error
-		if($this->IsErrorResponse($response))
-		{
-			$this->ExitError($response, $endpoint);
-		}
-
-		// If no response :
-		// This is a "not found" error
-		if($response === null)
-		{
-			$this->Exit(404, $endpoint);
-		}
-
-		// Outputs a standard response in any other case
-		$this->Exit200($response, $endpoint);
+		$this->ExitError($endpoint, 405);
 	}
 
 
 	//------------------------------------------------------------------------------------------------------------------
-	// Runs a POST
+	// Exits with a 409 code
 	//------------------------------------------------------------------------------------------------------------------
-	protected function RunPost(array $response, string $path, TEndpoint $endpoint)
+	public function Exit409(TEndpoint $endpoint)
 	{
-		if($response === null)
-		{
-			$this->Exit(409, $endpoint);
-		}
-
-		if($this->IsErrorResponse($response))
-		{
-			$this->ExitError($response, $endpoint);
-		}
-
-		$this->Exit201($response, $path, $endpoint);
-	}
-
-
-	//------------------------------------------------------------------------------------------------------------------
-	// Runs any verb (other than GET or POST)
-	//------------------------------------------------------------------------------------------------------------------
-	protected function RunAny(array $response, TEndpoint $endpoint)
-	{
-		if($response === null)
-		{
-			$this->Exit(409, $endpoint);
-		}
-
-		 if($this->IsErrorResponse($response))
-		{
-			$this->ExitError($response, $endpoint);
-		}
-
-		$this->Exit200($response, $endpoint);
+		$this->ExitError($endpoint, 409);
 	}
 
 
@@ -1760,24 +1800,25 @@ class TApi extends AModule
 		// Gets path that was derived by the router
 		if(!isset($args[$this->PathArg()]))
 		{
-			$this->Exit(404);
+			$this->ExitNoEndpoint();
 		}
 
-		$path = $this->StringArgValue($this->PathArg(), $args);
+		$path = $args[$this->PathArg()];
+		unset($args[$this->PathArg()]);
 
 		// Gets the endpoint corresponding to path
 		$endpoint = $this->UrlToEndpoint($path, $args);
 
 		if($endpoint === null)
 		{
-			$this->Exit(404);
+			$this->ExitNoEndpoint();
 		}
 
 		// If verb is OPTIONS :
 		// Returns the options available for the current endpoint
 		if($verb === 'OPTIONS')
 		{
-			$this->Exit200(array(), $endpoint);
+			$this->Exit200($endpoint, array());
 		}
 
 		// If verb is GET,
@@ -1792,100 +1833,26 @@ class TApi extends AModule
 		// Nothing to run
 		if(!$endpoint->HasOperation($verb))
 		{
-			$this->Exit(405, $endpoint);
+			$this->Exit405($endpoint);
 		}
 
+		// Gets operation
 		$operation = $endpoint->Operation($verb);
 
-		// If an offset was provided, but no limit :
-		// Limit is automatically set to 1
-		if(isset($args[$this->OffsetArg()]) && !isset($args[$this->LimitArg()]))
-		{
-			$args[$this->LimitArg()] = 1;
-		}
-
-		// Gets special arguments
-		$subset =     $this->StringArgValue($this->SubsetArg(), $args);
-		$fields =     $this->StringArgValue($this->FieldsArg(), $args);
-		$sort   =     $this->StringArgValue($this->SortArg()  , $args);
-		$offset = max($this->IntArgValue(   $this->OffsetArg(), $args), 0);
-		$limit  =     $this->IntArgValue(   $this->LimitArg() , $args);
-
-		if(($endpoint->MaximumLimit() > 0) && ($limit > $endpoint->MaximumLimit()))
-		{
-			$limit = $endpoint->MaximumLimit();
-		}
-
-		if($limit < 0)
-		{
-			$limit = 0;
-		}
-
-		// Fields and subset are only available for GET operations
-		if($verb !== 'GET')
-		{
-			$subset = '';
-			$fields = '';
-		}
-
-		// Sort, offset and limit are only available for GETALL operations
-		if($verb !== 'GETALL')
-		{
-			$sort   = '';
-			$offset = 0;
-			$limit  = 0;
-		}
-
-		// Gets the body from the Api call (except from GET, GETALL and DELETE : no body)
-		$body = null;
-
-		if(($verb !== 'GET') && ($verb !== 'GETALL') && ($verb !== 'DELETE'))
-		{
-			$body = json_decode(file_get_contents("php://input"), true);
-		}
+		// Gets the body from the Api call
+		$body = json_decode(file_get_contents("php://input"), true);
 
 		if($body === null)
 		{
 			$body = array();
 		}
 
-		// Checks parameters
-		$message = $operation->CheckParameters($args);
-		if($message !== '')
-		{
-			$this->Exit(400, $endpoint, self::ERROR_PARAMETERS, $message);
-		}
 
-		// Gets response data
-		$response = $operation->Response($args, $body, $subset, $fields, $sort, $offset, $limit);
+		// Runs the operation
+		$operation->Run($args, $body);
 
-		// Checks response
-		$message = $operation->CheckResponse($response);
-
-		if($message !== '')
-		{
-			$error = str_replace('{{TYPE}}', $operation->ResponseType()->Name(), self::ERROR_RESPONSE);
-
-			$this->Exit(400, $endpoint, $error, $message);
-		}
-
-		// Outputs the response, depending on the verb
-		if($verb === 'GETALL')
-		{
-			$this->RunGetAll($response, $offset, $limit, $endpoint);
-		}
-		elseif($verb === 'GET')
-		{
-			$this->RunGet($response, $endpoint);
-		}
-		elseif($verb === 'POST')
-		{
-			$this->RunPost($response, $path, $endpoint);
-		}
-		else
-		{
-			$this->RunAny($response, $endpoint);
-		}
+		// Operation does the job and stops here
+		exit();
 	}
 
 
@@ -1936,16 +1903,17 @@ class TApi extends AModule
 	// Maker : Operation
 	//------------------------------------------------------------------------------------------------------------------
 	protected function MakeOperation(
-		TEndpoint $endpoint,
-		string    $verb,
-		callable  $callback,
-		string    $summary                = '',
-		string    $description            = '',
-		string    $code                   = '',
-		AType     $responseType           = null,
-		string    $externalDocDescription = '',
-		string    $externalDocUrl         = '',
-		bool      $isDeprecated           = false) : TOperation
+		TEndpoint       $endpoint,
+		string          $verb,
+		callable        $callback,
+		AType           $bodyType               = null,
+		AType           $responseType           = null,
+		string          $summary                = '',
+		string          $description            = '',
+		string          $code                   = '',
+		string          $externalDocDescription = '',
+		string          $externalDocUrl         = '',
+		bool            $isDeprecated           = false) : TOperation
 	{
 		$res = new TOperation(
 			$this->Core(),
@@ -1953,15 +1921,18 @@ class TApi extends AModule
 			$endpoint,
 			$verb,
 			$callback,
+			$bodyType,
+			$responseType,
 			$summary,
 			$description,
 			$code,
-			$responseType,
 			$externalDocDescription,
 			$externalDocUrl,
 			$isDeprecated);
 
 		$res->Init();
+
+		$endpoint->AddOperation($verb, $res);
 
 		return $res;
 	}
@@ -2001,9 +1972,9 @@ class TApi extends AModule
 	//------------------------------------------------------------------------------------------------------------------
 	// Maker : Boolean type
 	//------------------------------------------------------------------------------------------------------------------
-	public function MakeTypeBoolean(string $name) : TTypeBoolean
+	public function MakeTypeBoolean(string $name, bool $sample = false, bool $default = false) : TTypeBoolean
 	{
-		$res = new TTypeBoolean($this->Core(), $this, $name);
+		$res = new TTypeBoolean($this->Core(), $this, $name, $sample, $default);
 		$res->Init();
 
 		$this->AddType($res);
@@ -2019,9 +1990,11 @@ class TApi extends AModule
 		string $name,
 		int    $minimum = null,
 		int    $maximum = null,
-		array  $enums   = array()) : TTypeInteger
+		array  $enums   = array(),
+		int    $sample  = 0,
+		int    $default = 0) : TTypeInteger
 	{
-		$res = new TTypeInteger($this->Core(), $this, $name, $minimum, $maximum, $enums);
+		$res = new TTypeInteger($this->Core(), $this, $name, $minimum, $maximum, $enums, $sample, $default);
 		$res->Init();
 
 		$this->AddType($res);
@@ -2036,9 +2009,11 @@ class TApi extends AModule
 	public function MakeTypeFloat(
 		string $name,
 		float  $minimum = null,
-		float  $maximum = null) : TTypeFloat
+		float  $maximum = null,
+		float  $sample  = 0.0,
+		float  $default = 0.0) : TTypeFloat
 	{
-		$res = new TTypeFloat($this->Core(), $this, $name, $minimum, $maximum);
+		$res = new TTypeFloat($this->Core(), $this, $name, $minimum, $maximum, $sample, $default);
 		$res->Init();
 
 		$this->AddType($res);
@@ -2055,9 +2030,11 @@ class TApi extends AModule
 		int    $minimum = null,
 		int    $maximum = null,
 		string $pattern = '',
-		array  $enums   = array()) : TTypeString
+		array  $enums   = array(),
+		string $sample  = '',
+		string $default = '') : TTypeString
 	{
-		$res = new TTypeString($this->Core(), $this, $name, $minimum, $maximum, $pattern, $enums);
+		$res = new TTypeString($this->Core(), $this, $name, $minimum, $maximum, $pattern, $enums, $sample, $default);
 		$res->Init();
 
 		$this->AddType($res);
@@ -2071,9 +2048,11 @@ class TApi extends AModule
 	//------------------------------------------------------------------------------------------------------------------
 	public function MakeTypeCollection(
 		string $name,
-		AType  $itemsType = null) : TTypeCollection
+		AType  $itemsType = null,
+		array  $sample    = array(),
+		array  $default   = array()) : TTypeCollection
 	{
-		$res = new TTypeCollection($this->Core(), $this, $name, $itemsType);
+		$res = new TTypeCollection($this->Core(), $this, $name, $itemsType, $sample, $default);
 		$res->Init();
 
 		$this->AddType($res);
@@ -2083,18 +2062,20 @@ class TApi extends AModule
 
 
 	//------------------------------------------------------------------------------------------------------------------
-	// Maker : Entity type
+	// Maker : Record type
 	//------------------------------------------------------------------------------------------------------------------
-	public function MakeTypeEntity(
+	public function MakeTypeRecord(
 		string $name,
 		string $summary     = '',
-		string $description = '') : TTypeEntity
+		string $description = '',
+		array  $properties  = array(),
+		array  $sample      = array(),
+		array  $default     = array()) : TTypeRecord
 	{
-		$res = new TTypeEntity($this->Core(), $this, $name, $summary, $description);
+		$res = new TTypeRecord($this->Core(), $this, $name, $summary, $description, $properties, $sample, $default);
 		$res->Init();
 
-		$this->AddType(  $res);
-		$this->AddEntity($res);
+		$this->AddType($res);
 
 		return $res;
 	}
